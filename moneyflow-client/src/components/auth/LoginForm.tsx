@@ -1,12 +1,15 @@
 import PasswordInput from "@/components/input/PasswordInput";
 import TextInput from "@/components/input/TextInput";
+import { useAuth } from "@/context/AuthContext";
 import React, { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface LoginFormProps {
   onSwitchTab: () => void;
 }
 
 const LoginForm = ({ onSwitchTab }: LoginFormProps) => {
+  const { login } = useAuth();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [rememberMe, setRememberMe] = React.useState(false);
@@ -14,6 +17,8 @@ const LoginForm = ({ onSwitchTab }: LoginFormProps) => {
     email: false,
     password: false,
   });
+  const [loading, setLoading] = React.useState(false);
+  const [serverError, setServerError] = React.useState("");
 
   const errors = useMemo(() => {
     const e: Record<string, string> = {};
@@ -32,9 +37,8 @@ const LoginForm = ({ onSwitchTab }: LoginFormProps) => {
   const isValid =
     email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && password.length >= 8;
 
-  const touch = (field: string) => setTouched((t) => ({ ...t, [field]: true }));
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const navigate = useNavigate();
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched({
       email: true,
@@ -42,7 +46,18 @@ const LoginForm = ({ onSwitchTab }: LoginFormProps) => {
     });
     if (!isValid) return;
 
-    console.log("login success");
+    try {
+      setLoading(true);
+      setServerError("");
+
+      await login(email, password);
+
+      navigate("/");
+    } catch (error: any) {
+      setServerError(error.response?.data?.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <form
@@ -72,6 +87,11 @@ const LoginForm = ({ onSwitchTab }: LoginFormProps) => {
         }}
         error={errors.password}
       />
+      {serverError && (
+        <p className="text-xs text-destructive animate-fade-in">
+          {serverError}
+        </p>
+      )}
 
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
@@ -93,10 +113,10 @@ const LoginForm = ({ onSwitchTab }: LoginFormProps) => {
 
       <button
         type="submit"
-        disabled={!isValid}
+        disabled={!isValid || loading}
         className="w-full rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Login
+        {loading ? "Logging in..." : "Login"}
       </button>
 
       <button
