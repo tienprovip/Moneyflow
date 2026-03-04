@@ -17,12 +17,12 @@ const generateRefreshToken = (userId: string) => {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { name, email, password } = req.body;
     const existingUser = await UserModel.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already in use" });
     }
-    const user = await UserModel.create({ email, password });
+    const user = await UserModel.create({ name, email, password });
     const accessToken = generateAccessToken(user._id.toString());
     const refreshToken = generateRefreshToken(user._id.toString());
 
@@ -36,7 +36,7 @@ export const register = async (req: Request, res: Response) => {
       message: "User registered successfully",
       accessToken,
       refreshToken,
-      user: { id: user._id, email: user.email },
+      user: { id: user._id, email: user.email, name: user.name },
     });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
@@ -66,7 +66,7 @@ export const login = async (req: Request, res: Response) => {
       message: "Login successful",
       accessToken,
       refreshToken,
-      user: { id: user._id, email: user.email },
+      user: { id: user._id, email: user.email, name: user.name },
     });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
