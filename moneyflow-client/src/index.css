@@ -33,6 +33,21 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
+  --color-success: hsl(var(--primary));
+  --color-success-foreground: hsl(var(--primary-foreground));
+  --color-gold: hsl(45 93% 47%);
+  --color-gold-foreground: hsl(0 0% 100%);
+  --color-gold-muted: hsl(45 93% 96%);
+
+  --color-chart-emerald: hsl(var(--primary));
+  --color-chart-gold: hsl(45 93% 47%);
+  --color-chart-blue: hsl(217 91% 60%);
+  --color-chart-rose: hsl(0 84% 60%);
+  --color-chart-purple: hsl(262 83% 58%);
+
+  --color-sidebar: hsl(var(--sidebar-background));
+  --color-sidebar-muted: hsl(var(--muted-foreground));
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -44,6 +59,8 @@
   --animate-accordion-up: accordion-up 0.2s ease-out;
   --animate-fade-in: fade-in 0.35s ease-out;
   --animate-slide-tab: slide-tab 0.3s ease-out;
+  --animate-slide-in-left: slide-in-left 0.3s ease-out forwards;
+  --animate-shimmer: shimmer 2s infinite linear;
 
   @keyframes accordion-down {
     from {
@@ -82,6 +99,26 @@
     100% {
       opacity: 1;
       transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
     }
   }
 }
@@ -175,4 +212,31 @@
   .input-focus-ring {
     @apply transition-all duration-200 border-input focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none;
   }
+}
+
+@utility card-shadow {
+  box-shadow:
+    0 1px 3px 0 hsl(0 0% 0% / 0.04),
+    0 1px 2px -1px hsl(0 0% 0% / 0.04);
+}
+@utility card-shadow-hover {
+  box-shadow:
+    0 4px 6px -1px hsl(0 0% 0% / 0.06),
+    0 2px 4px -2px hsl(0 0% 0% / 0.04);
+}
+@utility card-shadow-lg {
+  box-shadow:
+    0 10px 15px -3px hsl(0 0% 0% / 0.06),
+    0 4px 6px -4px hsl(0 0% 0% / 0.04);
+}
+@utility text-money {
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+@utility text-positive {
+  color: hsl(var(--primary));
+}
+@utility text-negative {
+  color: hsl(var(--destructive));
 }
