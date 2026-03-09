@@ -1,27 +1,39 @@
-import { NavLink } from "@/components/NavLink";
 import {
-  ArrowLeftRight,
-  CircleDollarSign,
-  Landmark,
   LayoutDashboard,
-  LogOut,
-  Settings,
-  Target,
+  ArrowLeftRight,
   TrendingUp,
+  CircleDollarSign,
+  Target,
+  Settings,
+  LogOut,
+  Landmark,
+  Sun,
+  Moon,
+  Languages,
 } from "lucide-react";
+import { NavLink } from "@/components/NavLink";
+import { useTheme } from "@/hooks/use-theme";
+import { useLanguage } from "@/hooks/use-language";
 
-const menuItems = [
-  { title: "Tổng quan", url: "/", icon: LayoutDashboard },
-  { title: "Giao dịch", url: "/transactions", icon: ArrowLeftRight },
-  { title: "Cổ phiếu", url: "/stocks", icon: TrendingUp },
-  { title: "Vàng", url: "/gold", icon: CircleDollarSign },
-  { title: "Mục tiêu", url: "/goals", icon: Target },
-  { title: "Cài đặt", url: "/settings", icon: Settings },
-];
+export function AppSidebar() {
+  const { theme, toggleTheme } = useTheme();
+  const { t, toggleLocale } = useLanguage();
 
-const AppSidebar = () => {
+  const menuItems = [
+    { title: t("nav.overview"), url: "/", icon: LayoutDashboard },
+    {
+      title: t("nav.transactions"),
+      url: "/transactions",
+      icon: ArrowLeftRight,
+    },
+    { title: t("nav.stocks"), url: "/stocks", icon: TrendingUp },
+    { title: t("nav.gold"), url: "/gold", icon: CircleDollarSign },
+    { title: t("nav.savings"), url: "/savings", icon: Target },
+    { title: t("nav.settings"), url: "/settings", icon: Settings },
+  ];
+
   return (
-    <aside className="hidden lg:flex flex-col w-65 min-h-screen border-r border-border bg-card p-6 sticky top-0">
+    <aside className="hidden lg:flex flex-col w-[260px] h-screen border-r border-border bg-card p-6 sticky top-0 overflow-y-auto">
       <div className="flex items-center gap-2.5 mb-10">
         <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
           <Landmark className="w-5 h-5 text-primary-foreground" />
@@ -34,38 +46,64 @@ const AppSidebar = () => {
       <nav className="flex-1 space-y-1">
         {menuItems.map((item) => (
           <NavLink
-            key={item.title}
+            key={item.url}
             to={item.url}
             end={item.url === "/"}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-150"
             activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
           >
-            <item.icon className="w-4.5 h-4.5" />
+            <item.icon className="w-[18px] h-[18px]" />
             <span>{item.title}</span>
           </NavLink>
         ))}
       </nav>
 
-      <div className="mt-auto pt-6 border-t border-border">
-        <div className="flex items-center gap-3">
+      <div className="mt-auto pt-6 border-t border-border space-y-1">
+        {/* Language toggle */}
+        <button
+          onClick={toggleLocale}
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-150"
+        >
+          <Languages className="w-[18px] h-[18px]" />
+          <span>{t("lang.label")}</span>
+        </button>
+
+        {/* Dark mode toggle */}
+        <button
+          onClick={toggleTheme}
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-150"
+        >
+          {theme === "dark" ? (
+            <Sun className="w-[18px] h-[18px]" />
+          ) : (
+            <Moon className="w-[18px] h-[18px]" />
+          )}
+          <span>
+            {theme === "dark" ? t("nav.lightMode") : t("nav.darkMode")}
+          </span>
+        </button>
+
+        <NavLink
+          to="/profile"
+          className="flex items-center gap-3 pt-3 rounded-lg transition-colors"
+          activeClassName=""
+        >
           <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
             T
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">
-              Phan Đình Tiến
+              Nguyễn Văn Tiến
             </p>
             <p className="text-xs text-muted-foreground truncate">
-              ptien1305@gmail.com
+              tien@email.com
             </p>
           </div>
           <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
             <LogOut className="w-4 h-4" />
           </button>
-        </div>
+        </NavLink>
       </div>
     </aside>
   );
-};
-
-export default AppSidebar;
+}
