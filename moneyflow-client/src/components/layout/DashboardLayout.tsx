@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { AppSidebar } from "./AppSidebar";
-// import { MobileNav } from "./MobileNav";
 import { Plus } from "lucide-react";
+import MobileNav from "@/components/layout/MobileNav";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -19,7 +19,7 @@ export function DashboardLayout({
 
       {/* Main content */}
       <main className="flex-1 min-h-screen min-w-0 overflow-hidden pb-24 lg:pb-8">
-        <div className="max-w-[1200px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <div className="max-w-300 mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
           {children}
         </div>
       </main>
@@ -35,7 +35,7 @@ export function DashboardLayout({
       )}
 
       {/* Mobile bottom nav */}
-      {/* <MobileNav /> */}
+      <MobileNav />
     </div>
   );
 }

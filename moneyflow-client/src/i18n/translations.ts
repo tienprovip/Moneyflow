@@ -12,6 +12,7 @@ const translations = {
   "nav.lightMode": { vi: "Chế độ sáng", en: "Light Mode" },
   "nav.darkShort": { vi: "Tối", en: "Dark" },
   "nav.lightShort": { vi: "Sáng", en: "Light" },
+  "nav.more": { vi: "Thêm", en: "More" },
 
   // Dashboard - Greeting
   "greeting.morning": { vi: "Chào buổi sáng", en: "Good morning" },
