@@ -1,22 +1,39 @@
-import { Schema, model, Document, Types } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface IStock extends Document {
-  userId: Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
   symbol: string;
   quantity: number;
   buyPrice: number;
   buyDate: Date;
+
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const stockSchema = new Schema<IStock>(
+const StockSchema = new Schema<IStock>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    symbol: { type: String, required: true },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+
+    symbol: {
+      type: String,
+      required: true,
+      uppercase: true,
+      trim: true,
+    },
+
     quantity: { type: Number, required: true },
+
     buyPrice: { type: Number, required: true },
+
     buyDate: { type: Date, required: true },
   },
   { timestamps: true },
 );
 
-export const StockModel = model<IStock>("Stock", stockSchema);
+export default mongoose.model<IStock>("Stock", StockSchema);
