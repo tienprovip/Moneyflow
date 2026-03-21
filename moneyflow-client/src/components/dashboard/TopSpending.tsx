@@ -67,4 +67,4 @@ const TopSpending = () => {
   );
 };
 
-export default TopSpending;
+export { TopSpending };

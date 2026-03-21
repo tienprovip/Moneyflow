@@ -88,4 +88,4 @@ const NetWorthChart = () => {
   );
 };
 
-export default NetWorthChart;
+export { NetWorthChart };

@@ -77,4 +77,4 @@ const GoldSection = () => {
   );
 };
 
-export default GoldSection;
+export { GoldSection };

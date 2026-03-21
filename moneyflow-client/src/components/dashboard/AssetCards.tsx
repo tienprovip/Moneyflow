@@ -1,38 +1,11 @@
 import {
-  ArrowDownRight,
-  ArrowUpRight,
-  CircleDollarSign,
-  TrendingUp,
   Wallet,
+  TrendingUp,
+  CircleDollarSign,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
-import React from "react";
-
-const assets = [
-  {
-    title: "Tiền mặt",
-    value: "10.000.000đ",
-    change: "+5%",
-    positive: true,
-    icon: Wallet,
-    accent: "primary" as const,
-  },
-  {
-    title: "Danh mục cổ phiếu",
-    value: "10.500.000đ",
-    change: "-5%",
-    positive: false,
-    icon: TrendingUp,
-    accent: "chart-blue" as const,
-  },
-  {
-    title: "Giá trị vàng",
-    value: "10.000.000đ",
-    change: "+5%",
-    positive: true,
-    icon: CircleDollarSign,
-    accent: "gold" as const,
-  },
-];
+import { useLanguage } from "@/hooks/use-language";
 
 const accentStyles = {
   primary: "bg-primary/10 text-primary",
@@ -40,7 +13,36 @@ const accentStyles = {
   gold: "bg-gold/10 text-gold",
 };
 
-const AssetCards = () => {
+export function AssetCards() {
+  const { t } = useLanguage();
+
+  const assets = [
+    {
+      title: t("asset.cash"),
+      value: "1.130.750.000₫",
+      change: "+2,1%",
+      positive: true,
+      icon: Wallet,
+      accent: "primary" as const,
+    },
+    {
+      title: t("asset.stocks"),
+      value: "1.571.000.000₫",
+      change: "+18,7%",
+      positive: true,
+      icon: TrendingUp,
+      accent: "chart-blue" as const,
+    },
+    {
+      title: t("asset.gold"),
+      value: "508.250.000₫",
+      change: "-1,3%",
+      positive: false,
+      icon: CircleDollarSign,
+      accent: "gold" as const,
+    },
+  ];
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
       {assets.map((asset, i) => (
@@ -74,6 +76,4 @@ const AssetCards = () => {
       ))}
     </div>
   );
-};
-
-export default AssetCards;
+}

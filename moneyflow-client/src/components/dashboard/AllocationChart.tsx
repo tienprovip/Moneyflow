@@ -78,4 +78,4 @@ const AllocationChart = () => {
   );
 };
 
-export default AllocationChart;
+export { AllocationChart };
