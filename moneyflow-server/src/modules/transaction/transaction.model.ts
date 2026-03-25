@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { CurrencyCode } from "../../shared/currency";
 
 export enum TransactionType {
   INCOME = "income",
@@ -12,6 +13,7 @@ export interface ITransaction extends Document {
 
   type: TransactionType;
   amount: number;
+  currencyCode: CurrencyCode;
   note?: string;
   date: Date;
 
@@ -45,6 +47,11 @@ const TransactionSchema = new Schema<ITransaction>(
 
     amount: { type: Number, required: true, min: 0 },
 
+    currencyCode: {
+      type: String,
+      enum: Object.values(CurrencyCode),
+      default: CurrencyCode.VND,
+    },
     note: String,
 
     date: {

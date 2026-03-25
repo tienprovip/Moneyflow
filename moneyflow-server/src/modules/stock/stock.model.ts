@@ -1,10 +1,12 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { CurrencyCode } from "../../shared/currency";
 
 export interface IStock extends Document {
   userId: mongoose.Types.ObjectId;
   symbol: string;
   quantity: number;
   buyPrice: number;
+  currencyCode: CurrencyCode;
   buyDate: Date;
 
   createdAt: Date;
@@ -30,6 +32,12 @@ const StockSchema = new Schema<IStock>(
     quantity: { type: Number, required: true },
 
     buyPrice: { type: Number, required: true },
+
+    currencyCode: {
+      type: String,
+      enum: Object.values(CurrencyCode),
+      default: CurrencyCode.VND,
+    },
 
     buyDate: { type: Date, required: true },
   },

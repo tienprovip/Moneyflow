@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { LocalizedText, localizedTextSchema } from "../../shared/localized";
 
 export enum CategoryType {
   INCOME = "income",
@@ -7,7 +8,7 @@ export enum CategoryType {
 
 export interface ICategory extends Document {
   userId?: mongoose.Types.ObjectId;
-  name: string;
+  name: LocalizedText;
   type: CategoryType;
   icon?: string;
   color?: string;
@@ -20,8 +21,7 @@ export interface ICategory extends Document {
 const CategorySchema = new Schema<ICategory>(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", index: true },
-
-    name: { type: String, required: true },
+    name: { type: localizedTextSchema, required: true },
 
     type: {
       type: String,

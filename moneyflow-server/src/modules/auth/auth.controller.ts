@@ -1,21 +1,27 @@
 import { Request, Response } from "express";
 import * as authService from "./auth.service";
-import { t } from "../../i18n";
+import { buildValidationError, t } from "../../i18n";
+import {
+  loginSchema,
+  refreshTokenSchema,
+  registerSchema,
+} from "./auth.validation";
 
 // ================= REGISTER =================
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
-      return res
-        .status(400)
-        .json({ message: t(req, "auth.missingRequiredFields") });
+    const parsed = registerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(buildValidationError(req, parsed.error));
     }
 
     const { user, accessToken, refreshToken } =
-      await authService.registerService(name, email, password);
+      await authService.registerService(
+        parsed.data.name,
+        parsed.data.email,
+        parsed.data.password,
+      );
 
     return res.status(201).json({
       message: t(req, "auth.registerSuccess"),
@@ -41,17 +47,14 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: t(req, "auth.missingEmailOrPassword") });
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(buildValidationError(req, parsed.error));
     }
 
     const { user, accessToken, refreshToken } = await authService.loginService(
-      email,
-      password,
+      parsed.data.email,
+      parsed.data.password,
     );
 
     return res.json({
@@ -84,13 +87,14 @@ export const login = async (req: Request, res: Response) => {
 
 export const refreshToken = async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(401).json({ message: t(req, "auth.noRefreshToken") });
+    const parsed = refreshTokenSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(buildValidationError(req, parsed.error));
     }
 
-    const tokens = await authService.refreshTokenService(refreshToken);
+    const tokens = await authService.refreshTokenService(
+      parsed.data.refreshToken,
+    );
 
     return res.json(tokens);
   } catch (error: any) {
@@ -111,15 +115,12 @@ export const refreshToken = async (req: Request, res: Response) => {
 
 export const logout = async (req: Request, res: Response) => {
   try {
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res
-        .status(400)
-        .json({ message: t(req, "auth.refreshTokenRequired") });
+    const parsed = refreshTokenSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json(buildValidationError(req, parsed.error));
     }
 
-    await authService.logoutService(refreshToken);
+    await authService.logoutService(parsed.data.refreshToken);
 
     return res.json({ message: t(req, "auth.logoutSuccess") });
   } catch {

@@ -1,9 +1,11 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { CurrencyCode } from "../../shared/currency";
 
 export interface IGold extends Document {
   userId: mongoose.Types.ObjectId;
   weight: number;
   buyPrice: number;
+  currencyCode: CurrencyCode;
   buyDate: Date;
 
   createdAt: Date;
@@ -22,6 +24,12 @@ const GoldSchema = new Schema<IGold>(
     weight: { type: Number, required: true },
 
     buyPrice: { type: Number, required: true },
+
+    currencyCode: {
+      type: String,
+      enum: Object.values(CurrencyCode),
+      default: CurrencyCode.VND,
+    },
 
     buyDate: { type: Date, required: true },
   },

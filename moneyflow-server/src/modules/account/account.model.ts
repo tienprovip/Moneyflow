@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { CurrencyCode } from "../../shared/currency";
 
 export enum AccountType {
   WALLET = "wallet",
@@ -10,6 +11,7 @@ export interface IAccount extends Document {
   userId: mongoose.Types.ObjectId;
   name: string;
   type: AccountType;
+  currencyCode: CurrencyCode;
 
   balance: number;
 
@@ -32,13 +34,18 @@ const AccountSchema = new Schema<IAccount>(
       required: true,
       index: true,
     },
-
     name: { type: String, required: true },
 
     type: {
       type: String,
       enum: Object.values(AccountType),
       required: true,
+    },
+
+    currencyCode: {
+      type: String,
+      enum: Object.values(CurrencyCode),
+      default: CurrencyCode.VND,
     },
 
     balance: { type: Number, default: 0 },

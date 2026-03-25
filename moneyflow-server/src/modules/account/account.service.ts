@@ -1,10 +1,12 @@
 import AccountModel, { AccountType } from "./account.model";
+import { CurrencyCode } from "../../shared/currency";
 
 export const createAccountService = async (userId: string, data: any) => {
   const accountData: any = {
     userId,
     name: data.name,
     type: data.type,
+    currencyCode: data.currencyCode ?? CurrencyCode.VND,
     balance: data.balance || 0,
   };
 
@@ -42,9 +44,13 @@ export const updateAccountService = async (
   accountId: string,
   data: any,
 ) => {
-  return await AccountModel.findOneAndUpdate({ _id: accountId, userId }, data, {
-    new: true,
-  });
+  return await AccountModel.findOneAndUpdate(
+    { _id: accountId, userId },
+    data,
+    {
+      new: true,
+    },
+  );
 };
 
 export const deleteAccountService = async (
