@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { t } from "../i18n";
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -13,7 +14,7 @@ export const protect = (
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Not authorized" });
+    return res.status(401).json({ message: t(req, "auth.notAuthorized") });
   }
 
   const token = authHeader.split(" ")[1];
@@ -27,6 +28,6 @@ export const protect = (
     req.userId = decoded.userId;
     next();
   } catch {
-    return res.status(401).json({ message: "Token expired or invalid" });
+    return res.status(401).json({ message: t(req, "auth.invalidToken") });
   }
 };

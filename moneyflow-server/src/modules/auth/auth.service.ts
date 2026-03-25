@@ -1,17 +1,25 @@
 import { UserModel } from "../user/user.model";
 import { RefreshTokenModel } from "./refreshToken.model";
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 
 const generateAccessToken = (userId: string) => {
-  return jwt.sign({ userId }, process.env.JWT_ACCESS_SECRET as string, {
-    expiresIn: process.env.ACCESS_TOKEN_EXPIRES as string,
-  });
+  const options: SignOptions = {
+    expiresIn: process.env.ACCESS_TOKEN_EXPIRES as SignOptions["expiresIn"],
+  };
+
+  return jwt.sign({ userId }, process.env.JWT_ACCESS_SECRET as string, options);
 };
 
 const generateRefreshToken = (userId: string) => {
-  return jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET as string, {
-    expiresIn: process.env.REFRESH_TOKEN_EXPIRES as string,
-  });
+  const options: SignOptions = {
+    expiresIn: process.env.REFRESH_TOKEN_EXPIRES as SignOptions["expiresIn"],
+  };
+
+  return jwt.sign(
+    { userId },
+    process.env.JWT_REFRESH_SECRET as string,
+    options,
+  );
 };
 
 export const registerService = async (

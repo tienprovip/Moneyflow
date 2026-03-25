@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as authService from "./auth.service";
+import { t } from "../../i18n";
 
 // ================= REGISTER =================
 
@@ -8,14 +9,16 @@ export const register = async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "Missing required fields" });
+      return res
+        .status(400)
+        .json({ message: t(req, "auth.missingRequiredFields") });
     }
 
     const { user, accessToken, refreshToken } =
       await authService.registerService(name, email, password);
 
     return res.status(201).json({
-      message: "User registered successfully",
+      message: t(req, "auth.registerSuccess"),
       accessToken,
       refreshToken,
       user: {
@@ -27,10 +30,10 @@ export const register = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     if (error.message === "EMAIL_EXISTS") {
-      return res.status(400).json({ message: "Email already in use" });
+      return res.status(400).json({ message: t(req, "auth.emailExists") });
     }
 
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: t(req, "common.serverError") });
   }
 };
 
@@ -41,7 +44,9 @@ export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "Missing email or password" });
+      return res
+        .status(400)
+        .json({ message: t(req, "auth.missingEmailOrPassword") });
     }
 
     const { user, accessToken, refreshToken } = await authService.loginService(
@@ -50,7 +55,7 @@ export const login = async (req: Request, res: Response) => {
     );
 
     return res.json({
-      message: "Login successful",
+      message: t(req, "auth.loginSuccess"),
       accessToken,
       refreshToken,
       user: {
@@ -62,14 +67,16 @@ export const login = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     if (error.message === "INVALID_CREDENTIALS") {
-      return res.status(400).json({ message: "Invalid email or password" });
+      return res
+        .status(400)
+        .json({ message: t(req, "auth.invalidCredentials") });
     }
 
     if (error.message === "USER_DISABLED") {
-      return res.status(403).json({ message: "Account is disabled" });
+      return res.status(403).json({ message: t(req, "auth.accountDisabled") });
     }
 
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: t(req, "common.serverError") });
   }
 };
 
@@ -80,7 +87,7 @@ export const refreshToken = async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(401).json({ message: "No refresh token" });
+      return res.status(401).json({ message: t(req, "auth.noRefreshToken") });
     }
 
     const tokens = await authService.refreshTokenService(refreshToken);
@@ -91,10 +98,12 @@ export const refreshToken = async (req: Request, res: Response) => {
       error.message === "INVALID_TOKEN" ||
       error.message === "USER_NOT_ALLOWED"
     ) {
-      return res.status(403).json({ message: "Invalid or expired token" });
+      return res
+        .status(403)
+        .json({ message: t(req, "auth.invalidOrExpiredToken") });
     }
 
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: t(req, "common.serverError") });
   }
 };
 
@@ -105,13 +114,15 @@ export const logout = async (req: Request, res: Response) => {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return res.status(400).json({ message: "Refresh token required" });
+      return res
+        .status(400)
+        .json({ message: t(req, "auth.refreshTokenRequired") });
     }
 
     await authService.logoutService(refreshToken);
 
-    return res.json({ message: "Logged out successfully" });
+    return res.json({ message: t(req, "auth.logoutSuccess") });
   } catch {
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: t(req, "common.serverError") });
   }
 };
