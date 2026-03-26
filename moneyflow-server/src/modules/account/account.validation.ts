@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { AccountType } from "./account.model";
 
 export const createAccountSchema = z.object({
   name: z.string().min(1),
-  type: z.enum(["wallet", "bank", "saving"]),
+  type: z.nativeEnum(AccountType),
   currencyCode: z.enum(["VND", "USD", "EUR"]).optional(),
 
   balance: z.number().optional(),

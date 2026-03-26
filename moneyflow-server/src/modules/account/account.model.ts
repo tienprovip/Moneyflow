@@ -2,8 +2,10 @@ import mongoose, { Schema, Document } from "mongoose";
 import { CurrencyCode } from "../../shared/currency";
 
 export enum AccountType {
-  WALLET = "wallet",
+  CASH = "cash",
   BANK = "bank",
+  EWALLET = "ewallet",
+  CREDIT = "credit",
   SAVING = "saving",
 }
 
