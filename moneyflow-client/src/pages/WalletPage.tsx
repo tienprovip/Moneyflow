@@ -1,14 +1,7 @@
 import axiosInstance from "@/api/axios";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { CategoryIcon } from "@/components/transactions/CategoryIcon";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import WalletDetailPanel from "@/components/wallets/WalletDetailPanel";
+import WalletIcon from "@/components/wallets/WalletIcon";
+import WalletListPanel from "@/components/wallets/WalletListPanel";
 import { useLanguage } from "@/hooks/use-language";
 import { useToast } from "@/hooks/use-toast";
 import { fmtVND, formatVND } from "@/lib/format";
@@ -36,8 +32,8 @@ import {
   WALLET_TYPE_LABELS,
   WalletType,
 } from "@/types/wallet";
-import { icons, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Loader2, Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type AccountResponse = {
   _id: string;
@@ -71,20 +67,6 @@ const DEFAULT_COLOR_BY_TYPE: Record<WalletType, string> = {
   bank: WALLET_COLORS[1].class,
   ewallet: WALLET_COLORS[2].class,
   credit: WALLET_COLORS[4].class,
-};
-
-const LucideIcon = ({
-  name,
-  className,
-}: {
-  name: string;
-  className?: string;
-}) => {
-  const Icon = (
-    icons as Record<string, React.ComponentType<{ className?: string }>>
-  )[name];
-  if (!Icon) return null;
-  return <Icon className={className} />;
 };
 
 const getStoredWalletMeta = (): WalletMetaMap => {
@@ -179,6 +161,8 @@ const normalizeTransactions = (data: unknown): Transaction[] => {
     };
   });
 };
+
+const EMPTY_TXS: Transaction[] = [];
 
 const WalletPage = () => {
   const { t, locale } = useLanguage();
@@ -342,7 +326,7 @@ const WalletPage = () => {
         );
       }
     },
-    [t, toast],
+    [toast],
   );
 
   useEffect(() => {
@@ -398,6 +382,10 @@ const WalletPage = () => {
     resetFormValidation();
     setDialogOpen(true);
   }, [resetFormValidation]);
+
+  const handleWalletSelect = useCallback((walletId: string) => {
+    setSelectedWallet((current) => (current === walletId ? current : walletId));
+  }, []);
 
   const handleSave = useCallback(async () => {
     if (isSaving) return;
@@ -533,9 +521,7 @@ const WalletPage = () => {
         });
         removeWalletMeta(id);
 
-        if (selectedWallet === id) {
-          setSelectedWallet(null);
-        }
+        setSelectedWallet((current) => (current === id ? null : current));
 
         toast({
           title: t("wallets.deleted"),
@@ -552,13 +538,24 @@ const WalletPage = () => {
         setDeletingId(null);
       }
     },
-    [deletingId, removeWalletMeta, selectedWallet, t, toast],
+    [deletingId, removeWalletMeta, t, toast],
   );
 
-  const selectedWalletData = wallets.find(
-    (wallet) => wallet.id === selectedWallet,
+  const handleDeleteWallet = useCallback(
+    (walletId: string) => {
+      void handleDelete(walletId);
+    },
+    [handleDelete],
   );
-  const selectedTxs = selectedWallet ? walletTxs[selectedWallet] || [] : [];
+
+  const selectedWalletData = useMemo(
+    () => wallets.find((wallet) => wallet.id === selectedWallet) ?? null,
+    [selectedWallet, wallets],
+  );
+  const selectedTxs = useMemo(
+    () => (selectedWallet ? walletTxs[selectedWallet] ?? EMPTY_TXS : EMPTY_TXS),
+    [selectedWallet, walletTxs],
+  );
 
   return (
     <DashboardLayout onFabClick={openAdd}>
@@ -597,164 +594,31 @@ const WalletPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="lg:col-span-1 space-y-3">
-          {isLoadingWallets ? (
-            <Card className="py-12">
-              <CardContent className="flex justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              </CardContent>
-            </Card>
-          ) : wallets.length === 0 ? (
-            <Card className="py-12 text-center">
-              <CardContent>
-                <p className="text-muted-foreground mb-3">
-                  {t("wallets.emptyTitle")}
-                </p>
-                <Button onClick={openAdd} variant="outline">
-                  {t("wallets.addFirst")}
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            wallets.map((wallet) => (
-              <Card
-                key={wallet.id}
-                className={`cursor-pointer transition-all hover:card-shadow-hover hover:border-primary ${selectedWallet === wallet.id ? "ring-2 ring-primary" : ""}`}
-                onClick={() => setSelectedWallet(wallet.id)}
-              >
-                <CardContent className="py-3 px-4 flex items-center gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${wallet.color}`}
-                  >
-                    <LucideIcon name={wallet.icon} className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">
-                      {wallet.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {WALLET_TYPE_LABELS[wallet.type][locale]}
-                    </p>
-                  </div>
-                  <p
-                    className={`text-sm font-bold text-money ${wallet.balance >= 0 ? "text-positive" : "text-negative"}`}
-                  >
-                    {fmtVND(wallet.balance)}
-                  </p>
-                </CardContent>
-              </Card>
-            ))
-          )}
+          <WalletListPanel
+            addFirstLabel={t("wallets.addFirst")}
+            emptyTitle={t("wallets.emptyTitle")}
+            isLoadingWallets={isLoadingWallets}
+            locale={locale}
+            onOpenAdd={openAdd}
+            onSelectWallet={handleWalletSelect}
+            selectedWallet={selectedWallet}
+            wallets={wallets}
+          />
         </div>
 
         <div className="lg:col-span-2">
-          {selectedWalletData ? (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center ${selectedWalletData.color}`}
-                    >
-                      <LucideIcon
-                        name={selectedWalletData.icon}
-                        className="w-6 h-6"
-                      />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">
-                        {selectedWalletData.name}
-                      </CardTitle>
-                      <CardDescription>
-                        {WALLET_TYPE_LABELS[selectedWalletData.type][locale]}
-                        {selectedWalletData.note &&
-                          ` - ${selectedWalletData.note}`}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEdit(selectedWalletData);
-                      }}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      disabled={deletingId === selectedWalletData.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleDelete(selectedWalletData.id);
-                      }}
-                    >
-                      {deletingId === selectedWalletData.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-                <p
-                  className={`text-2xl font-bold text-money mt-2 ${selectedWalletData.balance >= 0 ? "text-positive" : "text-negative"}`}
-                >
-                  {fmtVND(selectedWalletData.balance)}
-                </p>
-              </CardHeader>
-              <CardContent>
-                <h3 className="text-sm font-semibold text-foreground mb-3">
-                  {t("wallets.recentTx")}
-                </h3>
-                {loadingTxWalletId === selectedWalletData.id ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : selectedTxs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    {t("wallets.noTx")}
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {selectedTxs.map((tx) => (
-                      <div
-                        key={tx.id}
-                        className="flex items-center gap-3 py-2 border-b border-border last:border-0"
-                      >
-                        <CategoryIcon category={tx.category} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {tx.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {tx.date}
-                          </p>
-                        </div>
-                        <p
-                          className={`text-sm font-bold text-money ${tx.type === "income" ? "text-positive" : "text-negative"}`}
-                        >
-                          {tx.type === "income" ? "+" : "-"}
-                          {fmtVND(tx.amount)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="flex items-center justify-center min-h-[300px]">
-              <CardContent className="text-center py-12">
-                <p className="text-muted-foreground">
-                  {t("wallets.selectHint")}
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          <WalletDetailPanel
+            deletingId={deletingId}
+            loadingTxWalletId={loadingTxWalletId}
+            locale={locale}
+            noTransactionsLabel={t("wallets.noTx")}
+            onDeleteWallet={handleDeleteWallet}
+            onEditWallet={openEdit}
+            recentTransactionsLabel={t("wallets.recentTx")}
+            selectHintLabel={t("wallets.selectHint")}
+            selectedTxs={selectedTxs}
+            wallet={selectedWalletData}
+          />
         </div>
       </div>
 
@@ -835,7 +699,7 @@ const WalletPage = () => {
                     onClick={() => setFormIcon(icon)}
                     className={`w-9 h-9 rounded-lg flex items-center justify-center border transition-colors ${formIcon === icon ? "border-primary bg-primary/10" : "border-border hover:bg-secondary"}`}
                   >
-                    <LucideIcon name={icon} className="w-4 h-4" />
+                    <WalletIcon name={icon} className="w-4 h-4" />
                   </button>
                 ))}
               </div>
