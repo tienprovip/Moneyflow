@@ -217,6 +217,14 @@ const translations = {
     vi: "Vui lòng nhập tên",
     en: "Name is required",
   },
+  "validation.balanceRequired": {
+    vi: "Vui lòng nhập số dư",
+    en: "Balance is required",
+  },
+  "validation.balanceInvalid": {
+    vi: "Số dư phải là số hợp lệ",
+    en: "Balance must be a valid number",
+  },
   "validation.amountPositive": {
     vi: "Số tiền phải lớn hơn 0",
     en: "Amount must be a positive number",
@@ -224,6 +232,10 @@ const translations = {
   "validation.categoryRequired": {
     vi: "Vui lòng chọn danh mục",
     en: "Category is required",
+  },
+  "validation.noteTooLong": {
+    vi: "Ghi chú không được vượt quá 255 ký tự",
+    en: "Note must be 255 characters or fewer",
   },
 
   // Toast
@@ -500,6 +512,61 @@ const translations = {
   // Pagination
   "pagination.previous": { vi: "Trước", en: "Previous" },
   "pagination.next": { vi: "Sau", en: "Next" },
+
+  // Wallets Page
+  "nav.wallets": { vi: "Ví của tôi", en: "My Wallets" },
+  "wallets.pageTitle": { vi: "Ví của tôi", en: "My Wallets" },
+  "wallets.pageSubtitle": {
+    vi: "Quản lý các ví và theo dõi số dư",
+    en: "Manage your wallets and track balances",
+  },
+  "wallets.addWallet": { vi: "Thêm ví", en: "Add Wallet" },
+  "wallets.totalBalance": { vi: "Tổng số dư", en: "Total Balance" },
+  "wallets.walletCount": { vi: "ví", en: "wallets" },
+  "wallets.emptyTitle": { vi: "Chưa có ví nào", en: "No wallets yet" },
+  "wallets.addFirst": { vi: "Thêm ví đầu tiên", en: "Add first wallet" },
+  "wallets.recentTx": { vi: "Giao dịch gần đây", en: "Recent Transactions" },
+  "wallets.noTx": { vi: "Chưa có giao dịch", en: "No transactions" },
+  "wallets.selectHint": {
+    vi: "Chọn ví để xem chi tiết",
+    en: "Select a wallet to view details",
+  },
+  "wallets.addTitle": { vi: "Thêm ví", en: "Add Wallet" },
+  "wallets.editTitle": { vi: "Sửa ví", en: "Edit Wallet" },
+  "wallets.addDesc": {
+    vi: "Nhập thông tin ví mới.",
+    en: "Enter new wallet details.",
+  },
+  "wallets.editDesc": {
+    vi: "Cập nhật thông tin ví.",
+    en: "Update wallet details.",
+  },
+  "wallets.nameLabel": { vi: "Tên ví", en: "Wallet Name" },
+  "wallets.namePlaceholder": { vi: "VD: Vietcombank", en: "e.g. Vietcombank" },
+  "wallets.balanceLabel": { vi: "Số dư (VND)", en: "Balance (VND)" },
+  "wallets.typeLabel": { vi: "Loại ví", en: "Wallet Type" },
+  "wallets.iconLabel": { vi: "Biểu tượng", en: "Icon" },
+  "wallets.colorLabel": { vi: "Màu sắc", en: "Color" },
+  "wallets.noteLabel": { vi: "Ghi chú", en: "Note" },
+  "wallets.notePlaceholder": {
+    vi: "VD: Tài khoản chính",
+    en: "e.g. Primary account",
+  },
+  "wallets.added": { vi: "Đã thêm ví", en: "Wallet added" },
+  "wallets.addedDesc": {
+    vi: "Ví đã được thêm thành công.",
+    en: "Wallet has been added.",
+  },
+  "wallets.updated": { vi: "Đã cập nhật", en: "Updated" },
+  "wallets.updatedDesc": {
+    vi: "Ví đã được cập nhật.",
+    en: "Wallet has been updated.",
+  },
+  "wallets.deleted": { vi: "Đã xóa", en: "Deleted" },
+  "wallets.deletedDesc": {
+    vi: "Ví đã được xóa.",
+    en: "Wallet has been deleted.",
+  },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

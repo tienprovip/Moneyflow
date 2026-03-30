@@ -19,6 +19,7 @@ import {
   Target,
   TrendingUp,
   User,
+  Wallet,
 } from "lucide-react";
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -38,16 +39,18 @@ const MobileNav = () => {
       icon: ArrowLeftRight,
     },
     { title: t("nav.gold"), url: "/gold", icon: CircleDollarSign },
-    { title: t("nav.savings"), url: "/savings", icon: Target },
+    { title: t("nav.wallets"), url: "/wallets", icon: Wallet },
   ];
 
   const moreItems = [
+    { title: t("nav.savings"), url: "/savings", icon: Target },
     { title: t("nav.stocks"), url: "/stocks", icon: TrendingUp },
     {
       title: t("nav.profile"),
       url: "/profile",
       icon: User,
     },
+    { title: t("nav.settings"), url: "/settings", icon: Settings },
   ];
 
   const isMoreActive = moreItems.some((item) => location.pathname === item.url);

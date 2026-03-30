@@ -10,6 +10,7 @@ import {
   Sun,
   Moon,
   Languages,
+  Wallet,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useTheme } from "@/hooks/use-theme";
@@ -26,6 +27,7 @@ export function AppSidebar() {
       url: "/transactions",
       icon: ArrowLeftRight,
     },
+    { title: t("nav.wallets"), url: "/wallets", icon: Wallet },
     { title: t("nav.stocks"), url: "/stocks", icon: TrendingUp },
     { title: t("nav.gold"), url: "/gold", icon: CircleDollarSign },
     { title: t("nav.savings"), url: "/savings", icon: Target },
