@@ -1,43 +1,18 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import WalletDetailPanel from "@/components/wallets/WalletDetailPanel";
-import WalletIcon from "@/components/wallets/WalletIcon";
+import WalletFormDialog from "@/components/wallets/WalletFormDialog";
 import WalletListPanel from "@/components/wallets/WalletListPanel";
 import { useLanguage } from "@/hooks/use-language";
-import {
-  MAX_WALLET_NOTE_LENGTH,
-  useWalletForm,
-} from "@/hooks/use-wallet-form";
+import { useWalletForm } from "@/hooks/use-wallet-form";
 import { useWalletTransactions } from "@/hooks/use-wallet-transactions";
 import { useWallets } from "@/hooks/use-wallets";
 import { useToast } from "@/hooks/use-toast";
 import { getErrorMessage } from "@/lib/getErrorMessage";
 import { fmtVND } from "@/lib/format";
-import {
-  Wallet,
-  WALLET_COLORS,
-  WALLET_ICONS,
-  WALLET_TYPE_LABELS,
-  WalletType,
-} from "@/types/wallet";
-import { Loader2, Plus } from "lucide-react";
+import { Wallet } from "@/types/wallet";
+import { Plus } from "lucide-react";
 import { useCallback, useState } from "react";
 
 const WalletPage = () => {
@@ -70,6 +45,7 @@ const WalletPage = () => {
     formNote,
     formType,
     handleBalanceChange,
+    maxNoteLength,
     populateForm,
     resetForm,
     setFormColor,
@@ -249,141 +225,32 @@ const WalletPage = () => {
         </div>
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto hide-scrollbar">
-          <DialogTitle>
-            {editing ? t("wallets.editTitle") : t("wallets.addTitle")}
-          </DialogTitle>
-          <DialogDescription>
-            {editing ? t("wallets.editDesc") : t("wallets.addDesc")}
-          </DialogDescription>
-          <form
-            className="space-y-4 pt-2"
-            noValidate
-            onSubmit={(e) => {
-              e.preventDefault();
-              void handleSave();
-            }}
-          >
-            <div>
-              <Label>{t("wallets.nameLabel")}</Label>
-              <Input
-                value={formName}
-                aria-invalid={!!formErrors.name}
-                onBlur={() => touchFormField("name")}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder={t("wallets.namePlaceholder")}
-              />
-              {formErrors.name && (
-                <p className="mt-1 text-xs text-destructive">
-                  {formErrors.name}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label>{t("wallets.balanceLabel")}</Label>
-              <Input
-                aria-invalid={!!formErrors.balance}
-                inputMode="numeric"
-                type="text"
-                value={formBalance}
-                onBlur={() => touchFormField("balance")}
-                onChange={(e) => handleBalanceChange(e.target.value)}
-              />
-              {formErrors.balance && (
-                <p className="mt-1 text-xs text-destructive">
-                  {formErrors.balance}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label>{t("wallets.typeLabel")}</Label>
-              <Select
-                value={formType}
-                onValueChange={(value) => setFormType(value as WalletType)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(WALLET_TYPE_LABELS) as WalletType[]).map(
-                    (type) => (
-                      <SelectItem key={type} value={type}>
-                        {WALLET_TYPE_LABELS[type][locale]}
-                      </SelectItem>
-                    ),
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>{t("wallets.iconLabel")}</Label>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {WALLET_ICONS.map((icon) => (
-                  <button
-                    key={icon}
-                    type="button"
-                    onClick={() => setFormIcon(icon)}
-                    className={`w-9 h-9 rounded-lg flex items-center justify-center border transition-colors ${formIcon === icon ? "border-primary bg-primary/10" : "border-border hover:bg-secondary"}`}
-                  >
-                    <WalletIcon name={icon} className="w-4 h-4" />
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <Label>{t("wallets.colorLabel")}</Label>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {WALLET_COLORS.map((color) => (
-                  <button
-                    key={color.name}
-                    type="button"
-                    onClick={() => setFormColor(color.class)}
-                    className={`w-8 h-8 rounded-full ${color.class} ${formColor === color.class ? "ring-2 ring-offset-2 ring-primary" : ""} transition-all`}
-                  />
-                ))}
-              </div>
-            </div>
-            <div>
-              <Label>{t("wallets.noteLabel")}</Label>
-              <Textarea
-                aria-invalid={!!formErrors.note}
-                value={formNote}
-                onBlur={() => touchFormField("note")}
-                onChange={(e) => setFormNote(e.target.value)}
-                placeholder={t("wallets.notePlaceholder")}
-                rows={2}
-              />
-              <div className="mt-1 flex items-center justify-between gap-3">
-                <div>
-                  {formErrors.note && (
-                    <p className="text-xs text-destructive">
-                      {formErrors.note}
-                    </p>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {formNote.length}/{MAX_WALLET_NOTE_LENGTH}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2 justify-end pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isSaving}
-                onClick={() => setDialogOpen(false)}
-              >
-                {t("dialog.cancel")}
-              </Button>
-              <Button type="submit" disabled={isSaving}>
-                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {t("dialog.save")}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {dialogOpen && (
+        <WalletFormDialog
+          formBalance={formBalance}
+          formColor={formColor}
+          formErrors={formErrors}
+          formIcon={formIcon}
+          formName={formName}
+          formNote={formNote}
+          formType={formType}
+          isEditing={!!editing}
+          isSaving={isSaving}
+          maxNoteLength={maxNoteLength}
+          onBalanceChange={handleBalanceChange}
+          onOpenChange={setDialogOpen}
+          onSave={() => {
+            void handleSave();
+          }}
+          open={dialogOpen}
+          setFormColor={setFormColor}
+          setFormIcon={setFormIcon}
+          setFormName={setFormName}
+          setFormNote={setFormNote}
+          setFormType={setFormType}
+          touchFormField={touchFormField}
+        />
+      )}
     </DashboardLayout>
   );
 };
