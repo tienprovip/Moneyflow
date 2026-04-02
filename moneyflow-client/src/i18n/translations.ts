@@ -567,6 +567,13 @@ const translations = {
     vi: "Ví đã được xóa.",
     en: "Wallet has been deleted.",
   },
+  // Confirm dialog
+  "confirm.deleteTitle": { vi: "Xác nhận xóa", en: "Confirm delete" },
+  "confirm.deleteDesc": {
+    vi: "Bạn có chắc chắn muốn xóa? Hành động này không thể hoàn tác.",
+    en: "Are you sure you want to delete? This action cannot be undone.",
+  },
+  "confirm.delete": { vi: "Xóa", en: "Delete" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

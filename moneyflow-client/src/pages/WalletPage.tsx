@@ -14,6 +14,7 @@ import { fmtVND } from "@/lib/format";
 import { Wallet } from "@/types/wallet";
 import { Plus } from "lucide-react";
 import { useCallback, useState } from "react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const WalletPage = () => {
   const { t, locale } = useLanguage();
@@ -60,6 +61,7 @@ const WalletPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Wallet | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const openAdd = useCallback(() => {
     setEditing(null);
@@ -155,10 +157,17 @@ const WalletPage = () => {
 
   const handleDeleteWallet = useCallback(
     (walletId: string) => {
-      void handleDelete(walletId);
+      setDeleteId(walletId);
     },
-    [handleDelete],
+    [],
   );
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteId) return;
+
+    await handleDelete(deleteId);
+    setDeleteId(null);
+  }, [deleteId, handleDelete]);
 
   return (
     <DashboardLayout onFabClick={openAdd}>
@@ -251,6 +260,13 @@ const WalletPage = () => {
           touchFormField={touchFormField}
         />
       )}
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        onConfirm={() => {
+          void handleConfirmDelete();
+        }}
+      />
     </DashboardLayout>
   );
 };
