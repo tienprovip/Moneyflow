@@ -8,12 +8,14 @@ export interface Transaction {
   date: string;
   status: "completed" | "pending";
   notes?: string;
+  walletId?: string;
 }
 
 export interface TransactionFilters {
   search: string;
   category: string;
   type: "all" | "income" | "expense";
+  walletId: string;
   dateRange: {
     from: Date | undefined;
     to: Date | undefined;

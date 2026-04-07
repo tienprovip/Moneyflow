@@ -12,7 +12,6 @@ const translations = {
   "nav.lightMode": { vi: "Chế độ sáng", en: "Light Mode" },
   "nav.darkShort": { vi: "Tối", en: "Dark" },
   "nav.lightShort": { vi: "Sáng", en: "Light" },
-  "nav.more": { vi: "Thêm", en: "More" },
 
   // Dashboard - Greeting
   "greeting.morning": { vi: "Chào buổi sáng", en: "Good morning" },
@@ -217,14 +216,6 @@ const translations = {
     vi: "Vui lòng nhập tên",
     en: "Name is required",
   },
-  "validation.balanceRequired": {
-    vi: "Vui lòng nhập số dư",
-    en: "Balance is required",
-  },
-  "validation.balanceInvalid": {
-    vi: "Số dư phải là số hợp lệ",
-    en: "Balance must be a valid number",
-  },
   "validation.amountPositive": {
     vi: "Số tiền phải lớn hơn 0",
     en: "Amount must be a positive number",
@@ -233,10 +224,38 @@ const translations = {
     vi: "Vui lòng chọn danh mục",
     en: "Category is required",
   },
-  "validation.noteTooLong": {
-    vi: "Ghi chú không được vượt quá 255 ký tự",
-    en: "Note must be 255 characters or fewer",
+  "validation.ratePositive": {
+    vi: "Lãi suất phải lớn hơn 0",
+    en: "Interest rate must be greater than 0",
   },
+  "validation.termPositive": {
+    vi: "Kỳ hạn phải lớn hơn 0",
+    en: "Term must be greater than 0",
+  },
+  "validation.symbolRequired": {
+    vi: "Vui lòng nhập mã cổ phiếu",
+    en: "Stock symbol is required",
+  },
+  "validation.pricePositive": {
+    vi: "Giá phải lớn hơn 0",
+    en: "Price must be greater than 0",
+  },
+  "validation.qtyPositive": {
+    vi: "Số lượng phải lớn hơn 0",
+    en: "Quantity must be greater than 0",
+  },
+  "validation.balanceRequired": {
+    vi: "Vui lòng nhập số dư",
+    en: "Balance is required",
+  },
+
+  // Confirm dialog
+  "confirm.deleteTitle": { vi: "Xác nhận xóa", en: "Confirm delete" },
+  "confirm.deleteDesc": {
+    vi: "Bạn có chắc chắn muốn xóa? Hành động này không thể hoàn tác.",
+    en: "Are you sure you want to delete? This action cannot be undone.",
+  },
+  "confirm.delete": { vi: "Xóa", en: "Delete" },
 
   // Toast
   "toast.added": { vi: "Đã thêm giao dịch", en: "Transaction added" },
@@ -260,6 +279,14 @@ const translations = {
   "cat.Sức khỏe": { vi: "Sức khỏe", en: "Health" },
   "cat.Di chuyển": { vi: "Di chuyển", en: "Transport" },
   "cat.Giáo dục": { vi: "Giáo dục", en: "Education" },
+
+  // Custom category
+  "dialog.newCategory": { vi: "Tạo danh mục mới", en: "Create new category" },
+  "dialog.newCategoryPlaceholder": {
+    vi: "Nhập tên danh mục...",
+    en: "Enter category name...",
+  },
+  "dialog.addCategory": { vi: "Thêm", en: "Add" },
 
   // Month abbreviations
   "month.8": { vi: "T8", en: "Aug" },
@@ -567,13 +594,13 @@ const translations = {
     vi: "Ví đã được xóa.",
     en: "Wallet has been deleted.",
   },
-  // Confirm dialog
-  "confirm.deleteTitle": { vi: "Xác nhận xóa", en: "Confirm delete" },
-  "confirm.deleteDesc": {
-    vi: "Bạn có chắc chắn muốn xóa? Hành động này không thể hoàn tác.",
-    en: "Are you sure you want to delete? This action cannot be undone.",
-  },
-  "confirm.delete": { vi: "Xóa", en: "Delete" },
+
+  // Wallet filter in transactions
+  "filter.wallet": { vi: "Ví", en: "Wallet" },
+  "filter.allWallets": { vi: "Tất cả ví", en: "All Wallets" },
+  "table.wallet": { vi: "Ví", en: "Wallet" },
+  "dialog.wallet": { vi: "Ví", en: "Wallet" },
+  "dialog.walletPlaceholder": { vi: "Chọn ví", en: "Select wallet" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

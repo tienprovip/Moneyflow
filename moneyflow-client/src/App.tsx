@@ -10,6 +10,7 @@ import { lazy, Suspense } from "react";
 const Auth = lazy(() => import("./pages/AuthPage"));
 const Dashboard = lazy(() => import("./pages/DashboardPage"));
 const Wallets = lazy(() => import("./pages/WalletPage"));
+const Transactions = lazy(() => import("./pages/TransactionPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/wallets" element={<Wallets />} />
+                <Route path="/transactions" element={<Transactions />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
