@@ -5,6 +5,7 @@ export interface Transaction {
   amount: number;
   type: "income" | "expense";
   category: string;
+  categoryId?: string;
   date: string;
   status: "completed" | "pending";
   notes?: string;
@@ -63,6 +64,16 @@ export const CATEGORY_CONFIG: Record<string, { icon: string; color: string }> =
       icon: "BookOpen",
       color:
         "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400",
+    },
+    "Thu nhập khác": {
+      icon: "Banknote",
+      color:
+        "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-400",
+    },
+    "Chi phí khác": {
+      icon: "Receipt",
+      color:
+        "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
     },
   };
 

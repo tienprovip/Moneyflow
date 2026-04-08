@@ -1,5 +1,9 @@
 import { useLanguage } from "@/hooks/use-language";
-import { formatVND } from "@/lib/format";
+import {
+  formatFormattedNumberInput,
+  formatFormattedNumberValue,
+  parseFormattedNumber,
+} from "@/lib/formatted-number";
 import { Wallet, WALLET_COLORS, WalletType } from "@/types/wallet";
 import { useCallback, useMemo, useState } from "react";
 
@@ -16,42 +20,6 @@ export interface WalletFormValues {
 }
 
 export const MAX_WALLET_NOTE_LENGTH = 255;
-
-const parseFormattedBalance = (value: string): number | null => {
-  const trimmedValue = value.trim();
-
-  if (!trimmedValue) return null;
-
-  const isNegative = trimmedValue.startsWith("-");
-  const digits = trimmedValue.replace(/\D/g, "");
-
-  if (!digits) return null;
-
-  const parsedValue = Number(`${isNegative ? "-" : ""}${digits}`);
-  return Number.isFinite(parsedValue) ? parsedValue : null;
-};
-
-const formatBalanceInput = (value: string): string => {
-  const trimmedValue = value.trim();
-
-  if (!trimmedValue) return "";
-
-  const isNegative = trimmedValue.startsWith("-");
-  const digits = trimmedValue.replace(/\D/g, "");
-
-  if (!digits) {
-    return isNegative ? "-" : "";
-  }
-
-  return `${isNegative ? "-" : ""}${formatVND(Number(digits))}`;
-};
-
-const formatBalanceFromNumber = (value: number): string => {
-  const absoluteValue = Math.abs(Math.trunc(value));
-  const formattedValue = formatVND(absoluteValue);
-
-  return value < 0 ? `-${formattedValue}` : formattedValue;
-};
 
 export const useWalletForm = () => {
   const { t } = useLanguage();
@@ -83,7 +51,7 @@ export const useWalletForm = () => {
         errors.balance = t("validation.balanceRequired");
       } else if (
         shouldValidateBalance &&
-        parseFormattedBalance(formBalance) === null
+        parseFormattedNumber(formBalance) === null
       ) {
         errors.balance = t("validation.balanceInvalid");
       }
@@ -106,7 +74,7 @@ export const useWalletForm = () => {
   );
 
   const handleBalanceChange = useCallback((value: string) => {
-    setFormBalance(formatBalanceInput(value));
+    setFormBalance(formatFormattedNumberInput(value));
   }, []);
 
   const touchFormField = useCallback((field: keyof WalletFormTouched) => {
@@ -134,7 +102,7 @@ export const useWalletForm = () => {
   const populateForm = useCallback(
     (wallet: Wallet) => {
       setFormName(wallet.name);
-      setFormBalance(formatBalanceFromNumber(wallet.balance));
+      setFormBalance(formatFormattedNumberValue(wallet.balance));
       setFormType(wallet.type);
       setFormIcon(wallet.icon);
       setFormColor(wallet.color);
@@ -154,7 +122,7 @@ export const useWalletForm = () => {
     const nextErrors = getWalletFormErrors(true);
     if (Object.keys(nextErrors).length > 0) return null;
 
-    const balance = parseFormattedBalance(formBalance);
+    const balance = parseFormattedNumber(formBalance);
     if (balance === null) return null;
 
     return {

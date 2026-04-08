@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,27 +18,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  type CategoryOption,
+  matchesCategoryOption,
+} from "@/hooks/use-categories";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
+import {
+  formatFormattedNumberInput,
+  formatFormattedNumberValue,
+  parseFormattedNumber,
+} from "@/lib/formatted-number";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/use-language";
-import { ALL_CATEGORIES, type Transaction } from "@/types/transaction";
+import type { Transaction } from "@/types/transaction";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: Omit<Transaction, "id" | "status">) => void;
+  onSave: (data: Omit<Transaction, "id" | "status">) => Promise<void> | void;
   editingTransaction: Transaction | null;
   wallets: { id: string; name: string }[];
-  allCategories?: string[];
-  onAddCategory?: (cat: string) => void;
+  allCategories?: CategoryOption[];
 }
 
 const AddTransactionDialog = ({
@@ -48,7 +56,6 @@ const AddTransactionDialog = ({
   editingTransaction,
   wallets,
   allCategories,
-  onAddCategory,
 }: Props) => {
   const { t } = useLanguage();
   const [name, setName] = useState("");
@@ -60,30 +67,30 @@ const AddTransactionDialog = ({
   const [walletId, setWalletId] = useState("");
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showNewCategory, setShowNewCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
 
-  const categories = allCategories || ALL_CATEGORIES;
+  const categories = useMemo(() => allCategories ?? [], [allCategories]);
+  const visibleCategories = categories.filter((category) => category.type === type);
 
   const isEdit = !!editingTransaction;
 
-  const translateCategory = (cat: string) => {
-    const key = `cat.${cat}` as any;
-    const result = t(key);
-    return result === key ? cat : result;
-  };
-
   useEffect(() => {
     if (editingTransaction) {
+      const matchedCategory = categories.find((option) =>
+        matchesCategoryOption(option, editingTransaction.category),
+      );
+      const matchedWallet = wallets.find(
+        (wallet) => wallet.id === editingTransaction.walletId,
+      );
+
       setName(editingTransaction.name);
-      setAmount(String(editingTransaction.amount));
+      setAmount(formatFormattedNumberValue(editingTransaction.amount));
       setType(editingTransaction.type);
-      setCategory(editingTransaction.category);
+      setCategory(matchedCategory?.value || "");
       setDate(new Date(editingTransaction.date));
       setNotes(
         editingTransaction.notes || editingTransaction.description || "",
       );
-      setWalletId(editingTransaction.walletId || "");
+      setWalletId(matchedWallet?.id || "");
     } else {
       setName("");
       setAmount("");
@@ -91,46 +98,55 @@ const AddTransactionDialog = ({
       setCategory("");
       setDate(new Date());
       setNotes("");
-      setWalletId("");
+      setWalletId(wallets[0]?.id || "");
     }
     setErrors({});
-    setShowNewCategory(false);
-    setNewCategoryName("");
-  }, [editingTransaction, open]);
+  }, [editingTransaction, open, categories, wallets]);
 
   const validate = () => {
     const e: Record<string, string> = {};
     if (!name.trim()) e.name = t("validation.nameRequired");
-    const num = Number(amount);
-    if (!amount || Number.isNaN(num) || num <= 0)
+    const num = parseFormattedNumber(amount);
+    if (!amount || num === null || num <= 0)
       e.amount = t("validation.amountPositive");
     if (!category) e.category = t("validation.categoryRequired");
+    if (!walletId) e.walletId = t("dialog.walletPlaceholder");
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleSave = async () => {
     if (!validate()) return;
+
+    const parsedAmount = parseFormattedNumber(amount);
+    if (parsedAmount === null || parsedAmount <= 0) return;
+
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 400));
-    onSave({
-      name: name.trim(),
-      description: notes.trim() || name.trim(),
-      amount: Number(amount),
-      type,
-      category,
-      date: date
-        ? format(date, "yyyy-MM-dd")
-        : format(new Date(), "yyyy-MM-dd"),
-      notes,
-      walletId: walletId || undefined,
-    });
-    setSaving(false);
-    onOpenChange(false);
-    toast({
-      title: isEdit ? t("toast.updated") : t("toast.added"),
-      description: `"${name.trim()}" ${isEdit ? t("toast.updatedDesc") : t("toast.addedDesc")}`,
-    });
+
+    try {
+      await onSave({
+        name: name.trim(),
+        description: notes.trim() || name.trim(),
+        amount: parsedAmount,
+        type,
+        category,
+        date: date
+          ? format(date, "yyyy-MM-dd")
+          : format(new Date(), "yyyy-MM-dd"),
+        notes,
+        walletId,
+      });
+
+      onOpenChange(false);
+      toast({
+        title: isEdit ? t("toast.updated") : t("toast.added"),
+        description: `"${name.trim()}" ${isEdit ? t("toast.updatedDesc") : t("toast.addedDesc")}`,
+      });
+    } catch {
+      return;
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -166,11 +182,13 @@ const AddTransactionDialog = ({
               <Label htmlFor="tx-amount">{t("dialog.amount")}</Label>
               <Input
                 id="tx-amount"
-                type="number"
+                type="text"
+                inputMode="numeric"
                 placeholder="0"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min={0}
+                onChange={(e) =>
+                  setAmount(formatFormattedNumberInput(e.target.value))
+                }
               />
               {errors.amount && (
                 <p className="text-xs text-destructive">{errors.amount}</p>
@@ -180,7 +198,22 @@ const AddTransactionDialog = ({
               <Label>{t("dialog.type")}</Label>
               <Select
                 value={type}
-                onValueChange={(v) => setType(v as "income" | "expense")}
+                onValueChange={(v) => {
+                  const nextType = v as "income" | "expense";
+                  const nextCategories = categories.filter(
+                    (category) => category.type === nextType,
+                  );
+                  const currentCategoryStillVisible =
+                    !category ||
+                    nextCategories.some(
+                      (item) => item.value === category,
+                    );
+
+                  setType(nextType);
+                  if (!currentCategoryStillVisible) {
+                    setCategory("");
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -197,76 +230,20 @@ const AddTransactionDialog = ({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>{t("dialog.category")}</Label>
-              {showNewCategory ? (
-                <div className="flex gap-1.5">
-                  <Input
-                    placeholder={t("dialog.newCategoryPlaceholder")}
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        const trimmed = newCategoryName.trim();
-                        if (trimmed && !categories.includes(trimmed)) {
-                          onAddCategory?.(trimmed);
-                          setCategory(trimmed);
-                        } else if (trimmed) {
-                          setCategory(trimmed);
-                        }
-                        setNewCategoryName("");
-                        setShowNewCategory(false);
-                      }
-                    }}
-                    autoFocus
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={t("dialog.categoryPlaceholder")}
                   />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={() => {
-                      const trimmed = newCategoryName.trim();
-                      if (trimmed && !categories.includes(trimmed)) {
-                        onAddCategory?.(trimmed);
-                        setCategory(trimmed);
-                      } else if (trimmed) {
-                        setCategory(trimmed);
-                      }
-                      setNewCategoryName("");
-                      setShowNewCategory(false);
-                    }}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex gap-1.5">
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="flex-1">
-                      <SelectValue
-                        placeholder={t("dialog.categoryPlaceholder")}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {translateCategory(c)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={() => setShowNewCategory(true)}
-                    title={t("dialog.newCategory")}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
+                </SelectTrigger>
+                <SelectContent>
+                  {visibleCategories.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {errors.category && (
                 <p className="text-xs text-destructive">{errors.category}</p>
               )}
@@ -315,6 +292,9 @@ const AddTransactionDialog = ({
                 ))}
               </SelectContent>
             </Select>
+            {errors.walletId && (
+              <p className="text-xs text-destructive">{errors.walletId}</p>
+            )}
           </div>
 
           {/* Notes */}
@@ -335,7 +315,7 @@ const AddTransactionDialog = ({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={saving}
-            className="mt-3.5"
+            className="mt-3.5 md:mt-0"
           >
             {t("dialog.cancel")}
           </Button>

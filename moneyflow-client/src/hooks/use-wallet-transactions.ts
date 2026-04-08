@@ -2,32 +2,11 @@ import axios from "axios";
 import axiosInstance from "@/api/axios";
 import { useToast } from "@/hooks/use-toast";
 import { getErrorMessage } from "@/lib/getErrorMessage";
+import { normalizeTransactions } from "@/lib/transaction";
 import { Transaction } from "@/types/transaction";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const EMPTY_TXS: Transaction[] = [];
-
-const normalizeTransactions = (data: unknown): Transaction[] => {
-  if (!Array.isArray(data)) return [];
-
-  return data.map((item, index) => {
-    const tx = item as Record<string, unknown>;
-    const amount = Number(tx.amount ?? 0);
-    const type = tx.type === "income" ? "income" : "expense";
-
-    return {
-      id: String(tx._id ?? tx.id ?? index),
-      name: String(tx.name ?? tx.title ?? "Transaction"),
-      description: String(tx.description ?? ""),
-      amount: Number.isFinite(amount) ? amount : 0,
-      type,
-      category: String(tx.category ?? "Other"),
-      date: String(tx.date ?? tx.createdAt ?? ""),
-      status: tx.status === "pending" ? "pending" : "completed",
-      notes: typeof tx.notes === "string" ? tx.notes : undefined,
-    };
-  });
-};
 
 export const useWalletTransactions = (walletId: string | null) => {
   const { toast } = useToast();
@@ -64,8 +43,8 @@ export const useWalletTransactions = (walletId: string | null) => {
       setLoadingTxWalletId(walletId);
 
       try {
-        const res = await axiosInstance.get("/transactions", {
-          params: { accountId: walletId },
+        const res = await axiosInstance.get("/transaction", {
+          params: { accountId: walletId, limit: 5 },
           signal: controller.signal,
         });
 

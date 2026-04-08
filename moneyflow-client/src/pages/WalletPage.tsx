@@ -35,7 +35,6 @@ const WalletPage = () => {
     loadingTxWalletId,
     removeTransactionsForWallet,
     selectedTxs,
-    setTransactionsForWallet,
   } = useWalletTransactions(selectedWallet);
   const {
     formBalance,
@@ -96,6 +95,7 @@ const WalletPage = () => {
     try {
       if (editing) {
         await updateWallet(editing.id, values);
+        removeTransactionsForWallet(editing.id);
 
         toast({
           title: t("wallets.updated"),
@@ -103,7 +103,7 @@ const WalletPage = () => {
         });
       } else {
         const newWallet = await createWallet(values);
-        setTransactionsForWallet(newWallet.id, []);
+        removeTransactionsForWallet(newWallet.id);
 
         toast({
           title: t("wallets.added"),
@@ -125,7 +125,7 @@ const WalletPage = () => {
     createWallet,
     editing,
     isSaving,
-    setTransactionsForWallet,
+    removeTransactionsForWallet,
     t,
     toast,
     updateWallet,

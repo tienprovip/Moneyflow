@@ -12,6 +12,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import type { CategoryOption } from "@/hooks/use-categories";
 import { useLanguage } from "@/hooks/use-language";
 import { cn } from "@/lib/utils";
 import type { TransactionFilters as Filters } from "@/types/transaction";
@@ -24,7 +25,7 @@ interface TransactionFiltersProps {
   onFiltersChange: (f: Filters) => void;
   sortBy: string;
   onSortChange: (s: string) => void;
-  categories: string[];
+  categories: CategoryOption[];
   wallets: { id: string; name: string }[];
 }
 
@@ -36,15 +37,16 @@ const TransactionFilters = ({
   categories,
   wallets,
 }: TransactionFiltersProps) => {
-  const { t, locale } = useLanguage();
+  const { t } = useLanguage();
+  const visibleCategories =
+    filters.type === "all"
+      ? categories
+      : categories.filter((category) => category.type === filters.type);
+
   const update = (patch: Partial<Filters>) => {
     onFiltersChange({ ...filters, ...patch });
   };
-  const translateCategory = (cat: string) => {
-    const key = `cat.${cat}` as any;
-    const result = t(key);
-    return result === key ? cat : result;
-  };
+
   return (
     <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6">
       {/* Search */}
@@ -68,9 +70,9 @@ const TransactionFilters = ({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">{t("filter.allCategories")}</SelectItem>
-          {categories.map((cat) => (
-            <SelectItem key={cat} value={cat}>
-              {translateCategory(cat)}
+          {visibleCategories.map((cat) => (
+            <SelectItem key={cat.value} value={cat.value}>
+              {cat.label}
             </SelectItem>
           ))}
         </SelectContent>
@@ -79,7 +81,23 @@ const TransactionFilters = ({
       {/* Type Filter */}
       <Select
         value={filters.type}
-        onValueChange={(v) => update({ type: v as Filters["type"] })}
+        onValueChange={(v) => {
+          const nextType = v as Filters["type"];
+          const nextCategories =
+            nextType === "all"
+              ? categories
+              : categories.filter((category) => category.type === nextType);
+          const currentCategoryStillVisible =
+            filters.category === "all" ||
+            nextCategories.some(
+              (category) => category.value === filters.category,
+            );
+
+          update({
+            type: nextType,
+            category: currentCategoryStillVisible ? filters.category : "all",
+          });
+        }}
       >
         <SelectTrigger className="w-full sm:w-32.5">
           <SelectValue placeholder={t("filter.type")} />

@@ -279,6 +279,8 @@ const translations = {
   "cat.Sức khỏe": { vi: "Sức khỏe", en: "Health" },
   "cat.Di chuyển": { vi: "Di chuyển", en: "Transport" },
   "cat.Giáo dục": { vi: "Giáo dục", en: "Education" },
+  "cat.Thu nhập khác": { vi: "Thu nhập khác", en: "Other income" },
+  "cat.Chi phí khác": { vi: "Chi phí khác", en: "Other expense" },
 
   // Custom category
   "dialog.newCategory": { vi: "Tạo danh mục mới", en: "Create new category" },
@@ -593,6 +595,24 @@ const translations = {
   "wallets.deletedDesc": {
     vi: "Ví đã được xóa.",
     en: "Wallet has been deleted.",
+  },
+
+  "wallets.redirectTitle": {
+    vi: "Cần tạo ví trước",
+    en: "Create a wallet first",
+  },
+  "wallets.redirectDesc": {
+    vi: "Bạn cần có ít nhất một ví trước khi xem giao dịch.",
+    en: "You need at least one wallet before viewing transactions.",
+  },
+
+  "wallets.noWalletToastTitle": {
+    vi: "Cần tạo ví trước",
+    en: "Create a wallet first",
+  },
+  "wallets.noWalletToastDesc": {
+    vi: "Bạn cần có ít nhất một ví trước khi xem giao dịch.",
+    en: "You need at least one wallet before viewing transactions.",
   },
 
   // Wallet filter in transactions

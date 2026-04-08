@@ -1,3 +1,4 @@
+import axiosInstance from "@/api/axios";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import AddTransactionDialog from "@/components/transactions/AddTransactionDialog";
 import SummaryCards from "@/components/transactions/SummaryCards";
@@ -6,162 +7,40 @@ import TransactionFilters from "@/components/transactions/TransactionFilters";
 import TransactionHeader from "@/components/transactions/TransactionHeader";
 import TransactionMobileList from "@/components/transactions/TransactionMobileList";
 import TransactionTable from "@/components/transactions/TransactionTable";
+import {
+  getCategoryValue,
+  matchesCategoryOption,
+  useCategories,
+} from "@/hooks/use-categories";
+import { useLanguage } from "@/hooks/use-language";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
+import { useWallets } from "@/hooks/use-wallets";
+import { getErrorMessage } from "@/lib/getErrorMessage";
+import {
+  normalizeTransaction,
+  normalizeTransactions,
+} from "@/lib/transaction";
 import type {
   TransactionFilters as Filters,
   Transaction,
 } from "@/types/transaction";
-import { ALL_CATEGORIES } from "@/types/transaction";
-import { useMemo, useState } from "react";
-
-const WALLETS = [
-  { id: "1", name: "Tiền mặt" },
-  { id: "2", name: "Vietcombank" },
-  { id: "3", name: "MoMo" },
-  { id: "4", name: "Visa Techcombank" },
-];
-
-const MOCK_TRANSACTIONS: Transaction[] = [
-  {
-    id: "1",
-    name: "Lương tháng",
-    description: "Lương hàng tháng",
-    amount: 85000000,
-    type: "income",
-    category: "Lương",
-    date: "2026-03-01",
-    status: "completed",
-    walletId: "2",
-  },
-  {
-    id: "2",
-    name: "Đi chợ",
-    description: "Mua thực phẩm hàng tuần",
-    amount: 1200000,
-    type: "expense",
-    category: "Ăn uống",
-    date: "2026-03-02",
-    status: "completed",
-    walletId: "1",
-  },
-  {
-    id: "3",
-    name: "Netflix",
-    description: "Gói đăng ký hàng tháng",
-    amount: 260000,
-    type: "expense",
-    category: "Giải trí",
-    date: "2026-03-03",
-    status: "completed",
-    walletId: "4",
-  },
-  {
-    id: "4",
-    name: "Dự án freelance",
-    description: "Thiết kế web",
-    amount: 15000000,
-    type: "income",
-    category: "Freelance",
-    date: "2026-03-04",
-    status: "completed",
-    walletId: "2",
-  },
-  {
-    id: "5",
-    name: "Tiền điện",
-    description: "Hóa đơn điện hàng tháng",
-    amount: 850000,
-    type: "expense",
-    category: "Hóa đơn",
-    date: "2026-03-05",
-    status: "pending",
-    walletId: "2",
-  },
-  {
-    id: "6",
-    name: "Cà phê",
-    description: "Highlands Coffee",
-    amount: 75000,
-    type: "expense",
-    category: "Ăn uống",
-    date: "2026-03-05",
-    status: "completed",
-    walletId: "3",
-  },
-  {
-    id: "7",
-    name: "Lợi nhuận đầu tư",
-    description: "Cổ tức cổ phiếu",
-    amount: 3200000,
-    type: "income",
-    category: "Đầu tư",
-    date: "2026-03-06",
-    status: "completed",
-    walletId: "2",
-  },
-  {
-    id: "8",
-    name: "Phòng gym",
-    description: "Phí thành viên hàng tháng",
-    amount: 800000,
-    type: "expense",
-    category: "Sức khỏe",
-    date: "2026-03-06",
-    status: "completed",
-    walletId: "1",
-  },
-  {
-    id: "9",
-    name: "Grab",
-    description: "Di chuyển đến công ty",
-    amount: 120000,
-    type: "expense",
-    category: "Di chuyển",
-    date: "2026-03-07",
-    status: "completed",
-    walletId: "3",
-  },
-  {
-    id: "10",
-    name: "Mua sách",
-    description: "Sách thiết kế",
-    amount: 450000,
-    type: "expense",
-    category: "Giáo dục",
-    date: "2026-03-07",
-    status: "completed",
-    walletId: "1",
-  },
-  {
-    id: "11",
-    name: "Tiền nhà",
-    description: "Tiền thuê nhà hàng tháng",
-    amount: 8000000,
-    type: "expense",
-    category: "Hóa đơn",
-    date: "2026-03-01",
-    status: "completed",
-    walletId: "2",
-  },
-  {
-    id: "12",
-    name: "Dự án phụ",
-    description: "Dự án ứng dụng mobile",
-    amount: 8500000,
-    type: "income",
-    category: "Freelance",
-    date: "2026-02-28",
-    status: "completed",
-    walletId: "2",
-  },
-];
+import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const PAGE_SIZE = 10;
 
 const Transactions = () => {
+  const navigate = useNavigate();
+  const { t } = useLanguage();
   const isMobile = useIsMobile();
-  const [transactions, setTransactions] =
-    useState<Transaction[]>(MOCK_TRANSACTIONS);
+  const { categories, categoryOptions: apiCategoryOptions } = useCategories();
+  const { isLoadingWallets, wallets: apiWallets } = useWallets();
+  const { toast } = useToast();
+  const hasRedirectedToWallets = useRef(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
@@ -176,36 +55,106 @@ const Transactions = () => {
     dateRange: { from: undefined, to: undefined },
   });
 
+  const categoryIdByValue = useMemo(
+    () =>
+      new Map(
+        categories
+          .map((category) => [getCategoryValue(category.name), category._id] as const)
+          .filter(([value]) => Boolean(value)),
+      ),
+    [categories],
+  );
+
+  const loadTransactions = useCallback(async () => {
+    setIsLoadingTransactions(true);
+
+    try {
+      const res = await axiosInstance.get("/transaction");
+      setTransactions(normalizeTransactions(res.data));
+    } catch (error: unknown) {
+      setTransactions([]);
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "Failed to load transactions."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingTransactions(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (isLoadingWallets) return;
+    if (apiWallets.length === 0) {
+      setTransactions([]);
+      setIsLoadingTransactions(false);
+      return;
+    }
+
+    void loadTransactions();
+  }, [apiWallets.length, isLoadingWallets, loadTransactions]);
+
+  useEffect(() => {
+    if (isLoadingWallets) return;
+    if (apiWallets.length > 0) return;
+    if (hasRedirectedToWallets.current) return;
+
+    hasRedirectedToWallets.current = true;
+    toast({
+      title: t("wallets.noWalletToastTitle"),
+      description: t("wallets.noWalletToastDesc"),
+    });
+    navigate("/wallets", { replace: true });
+  }, [apiWallets.length, isLoadingWallets, navigate, t, toast]);
+
   const filtered = useMemo(() => {
     let result = [...transactions];
 
     if (filters.search) {
-      const q = filters.search.toLowerCase();
+      const query = filters.search.toLowerCase();
       result = result.filter(
-        (t) =>
-          t.name.toLowerCase().includes(q) ||
-          t.description.toLowerCase().includes(q),
+        (transaction) =>
+          transaction.name.toLowerCase().includes(query) ||
+          transaction.description.toLowerCase().includes(query),
       );
-    }
-    if (filters.category !== "all") {
-      result = result.filter((t) => t.category === filters.category);
-    }
-    if (filters.type !== "all") {
-      result = result.filter((t) => t.type === filters.type);
-    }
-    if (filters.walletId !== "all") {
-      result = result.filter((t) => t.walletId === filters.walletId);
-    }
-    if (filters.dateRange.from) {
-      result = result.filter(
-        (t) => new Date(t.date) >= filters.dateRange.from!,
-      );
-    }
-    if (filters.dateRange.to) {
-      result = result.filter((t) => new Date(t.date) <= filters.dateRange.to!);
     }
 
-    // Sort
+    if (filters.category !== "all") {
+      const selectedCategory = apiCategoryOptions.find(
+        (category) => category.value === filters.category,
+      );
+
+      result = result.filter(
+        (transaction) =>
+          transaction.category === filters.category ||
+          (selectedCategory
+            ? matchesCategoryOption(selectedCategory, transaction.category)
+            : false),
+      );
+    }
+
+    if (filters.type !== "all") {
+      result = result.filter((transaction) => transaction.type === filters.type);
+    }
+
+    if (filters.walletId !== "all") {
+      result = result.filter(
+        (transaction) => transaction.walletId === filters.walletId,
+      );
+    }
+
+    if (filters.dateRange.from) {
+      result = result.filter(
+        (transaction) => new Date(transaction.date) >= filters.dateRange.from!,
+      );
+    }
+
+    if (filters.dateRange.to) {
+      result = result.filter(
+        (transaction) => new Date(transaction.date) <= filters.dateRange.to!,
+      );
+    }
+
     result.sort((a, b) => {
       switch (sortBy) {
         case "oldest":
@@ -214,13 +163,13 @@ const Transactions = () => {
           return b.amount - a.amount;
         case "amount-low":
           return a.amount - b.amount;
-        default: // newest
+        default:
           return new Date(b.date).getTime() - new Date(a.date).getTime();
       }
     });
 
     return result;
-  }, [transactions, filters, sortBy]);
+  }, [transactions, filters, sortBy, apiCategoryOptions]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice(
@@ -228,67 +177,128 @@ const Transactions = () => {
     currentPage * PAGE_SIZE,
   );
 
-  // Available months from transactions
+  useEffect(() => {
+    setCurrentPage((current) => Math.min(current, totalPages));
+  }, [totalPages]);
+
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
-    transactions.forEach((t) => {
-      months.add(t.date.slice(0, 7)); // "YYYY-MM"
+
+    transactions.forEach((transaction) => {
+      if (transaction.date) {
+        months.add(transaction.date.slice(0, 7));
+      }
     });
+
     return Array.from(months).sort().reverse();
   }, [transactions]);
 
-  // Summary filtered by month
   const summaryTransactions = useMemo(() => {
     if (summaryMonth === "all") return transactions;
-    return transactions.filter((t) => t.date.startsWith(summaryMonth));
+
+    return transactions.filter((transaction) =>
+      transaction.date.startsWith(summaryMonth),
+    );
   }, [transactions, summaryMonth]);
 
   const totalIncome = summaryTransactions
-    .filter((t) => t.type === "income")
-    .reduce((s, t) => s + t.amount, 0);
+    .filter((transaction) => transaction.type === "income")
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
   const totalExpense = summaryTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + t.amount, 0);
+    .filter((transaction) => transaction.type === "expense")
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
 
-  const handleAdd = (data: Omit<Transaction, "id" | "status">) => {
-    const newTx: Transaction = {
-      ...data,
-      id: crypto.randomUUID(),
-      status: "completed",
-    };
-    setTransactions((prev) => [newTx, ...prev]);
-  };
+  const buildTransactionPayload = useCallback(
+    (data: Omit<Transaction, "id" | "status">) => {
+      if (!data.walletId) {
+        throw new Error("Wallet is required.");
+      }
 
-  const handleEdit = (data: Omit<Transaction, "id" | "status">) => {
-    if (!editingTransaction) return;
-    setTransactions((prev) =>
-      prev.map((t) => (t.id === editingTransaction.id ? { ...t, ...data } : t)),
-    );
-    setEditingTransaction(null);
-  };
+      const payload = {
+        accountId: data.walletId,
+        amount: data.amount,
+        currencyCode: "VND",
+        date: data.date,
+        note: data.notes?.trim() || data.description.trim() || data.name.trim(),
+        title: data.name.trim(),
+        type: data.type,
+      };
+      const categoryId = categoryIdByValue.get(data.category);
 
-  const handleDelete = (id: string) => {
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
-  };
+      return categoryId ? { ...payload, categoryId } : payload;
+    },
+    [categoryIdByValue],
+  );
 
-  const openEdit = (tx: Transaction) => {
-    setEditingTransaction(tx);
-    setDialogOpen(true);
-  };
+  const handleAdd = async (data: Omit<Transaction, "id" | "status">) => {
+    try {
+      const res = await axiosInstance.post(
+        "/transaction",
+        buildTransactionPayload(data),
+      );
 
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
-  const allCategories = useMemo(() => {
-    const fromTx = transactions.map((t) => t.category);
-    return [...new Set([...ALL_CATEGORIES, ...customCategories, ...fromTx])];
-  }, [transactions, customCategories]);
-
-  const handleAddCategory = (cat: string) => {
-    if (!allCategories.includes(cat)) {
-      setCustomCategories((prev) => [...prev, cat]);
+      setTransactions((prev) => [normalizeTransaction(res.data), ...prev]);
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "Failed to create transaction."),
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
-  const categories = [...new Set(transactions.map((t) => t.category))];
+  const handleEdit = async (data: Omit<Transaction, "id" | "status">) => {
+    if (!editingTransaction) return;
+
+    try {
+      const res = await axiosInstance.put(
+        `/transaction/${editingTransaction.id}`,
+        buildTransactionPayload(data),
+      );
+      const updatedTransaction = normalizeTransaction(res.data);
+
+      setTransactions((prev) =>
+        prev.map((transaction) =>
+          transaction.id === editingTransaction.id
+            ? updatedTransaction
+            : transaction,
+        ),
+      );
+      setEditingTransaction(null);
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "Failed to update transaction."),
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await axiosInstance.delete(`/transaction/${id}`);
+      setTransactions((prev) =>
+        prev.filter((transaction) => transaction.id !== id),
+      );
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "Failed to delete transaction."),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openEdit = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setDialogOpen(true);
+  };
+
+  if (!isLoadingWallets && apiWallets.length === 0) {
+    return null;
+  }
 
   return (
     <DashboardLayout
@@ -304,6 +314,7 @@ const Transactions = () => {
         }}
       />
       <SummaryCards
+        allTransactions={transactions}
         totalIncome={totalIncome}
         totalExpense={totalExpense}
         selectedMonth={summaryMonth}
@@ -313,17 +324,21 @@ const Transactions = () => {
       />
       <TransactionFilters
         filters={filters}
-        onFiltersChange={(f) => {
-          setFilters(f);
+        onFiltersChange={(nextFilters) => {
+          setFilters(nextFilters);
           setCurrentPage(1);
         }}
         sortBy={sortBy}
         onSortChange={setSortBy}
-        categories={categories}
-        wallets={WALLETS}
+        categories={apiCategoryOptions}
+        wallets={apiWallets}
       />
 
-      {transactions.length === 0 ? (
+      {isLoadingTransactions ? (
+        <div className="flex items-center justify-center py-12 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      ) : transactions.length === 0 ? (
         <TransactionEmptyState
           onAddClick={() => {
             setEditingTransaction(null);
@@ -338,7 +353,7 @@ const Transactions = () => {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
-          wallets={WALLETS}
+          wallets={apiWallets}
         />
       ) : (
         <TransactionTable
@@ -348,7 +363,7 @@ const Transactions = () => {
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
-          wallets={WALLETS}
+          wallets={apiWallets}
         />
       )}
 
@@ -360,9 +375,8 @@ const Transactions = () => {
         }}
         onSave={editingTransaction ? handleEdit : handleAdd}
         editingTransaction={editingTransaction}
-        wallets={WALLETS}
-        allCategories={allCategories}
-        onAddCategory={handleAddCategory}
+        wallets={apiWallets}
+        allCategories={apiCategoryOptions}
       />
     </DashboardLayout>
   );

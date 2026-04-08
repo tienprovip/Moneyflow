@@ -32,6 +32,7 @@ function formatMonthLabel(ym: string): string {
 }
 
 interface SummaryCardsProps {
+  allTransactions: Transaction[];
   totalIncome: number;
   totalExpense: number;
   selectedMonth: string;
@@ -70,6 +71,45 @@ function buildDailyData(transactions: Transaction[]) {
       v: (incomeMap[d] || 0) - (expenseMap[d] || 0),
     })),
   };
+}
+
+function getPreviousMonth(month: string) {
+  const [year, monthIndex] = month.split("-").map(Number);
+  const date = new Date(year, monthIndex - 1, 1);
+  date.setMonth(date.getMonth() - 1);
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getTotals(transactions: Transaction[]) {
+  const income = transactions
+    .filter((transaction) => transaction.type === "income")
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+  const expense = transactions
+    .filter((transaction) => transaction.type === "expense")
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+  return {
+    balance: income - expense,
+    expense,
+    income,
+  };
+}
+
+function calculatePercentChange(current: number, previous: number) {
+  if (previous === 0) {
+    if (current === 0) return 0;
+    return 100;
+  }
+
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
+
+function formatPercentChange(value: number) {
+  const roundedValue = Number.isFinite(value) ? value : 0;
+  const sign = roundedValue > 0 ? "+" : "";
+
+  return `${sign}${roundedValue.toFixed(1)}%`;
 }
 
 function MiniLineChart({
@@ -138,6 +178,7 @@ function MiniLineChart({
 }
 
 const SummaryCards = ({
+  allTransactions,
   totalIncome,
   totalExpense,
   selectedMonth,
@@ -149,13 +190,49 @@ const SummaryCards = ({
   const balance = totalIncome - totalExpense;
 
   const dailyData = useMemo(() => buildDailyData(transactions), [transactions]);
+  const changeMetrics = useMemo(() => {
+    const currentMonth =
+      selectedMonth === "all" ? availableMonths[0] : selectedMonth;
+
+    if (!currentMonth) {
+      return {
+        balance: 0,
+        expense: 0,
+        income: 0,
+      };
+    }
+
+    const previousMonth = getPreviousMonth(currentMonth);
+    const currentTotals = getTotals(
+      allTransactions.filter((transaction) =>
+        transaction.date.startsWith(currentMonth),
+      ),
+    );
+    const previousTotals = getTotals(
+      allTransactions.filter((transaction) =>
+        transaction.date.startsWith(previousMonth),
+      ),
+    );
+
+    return {
+      balance: calculatePercentChange(
+        currentTotals.balance,
+        previousTotals.balance,
+      ),
+      expense: calculatePercentChange(
+        currentTotals.expense,
+        previousTotals.expense,
+      ),
+      income: calculatePercentChange(currentTotals.income, previousTotals.income),
+    };
+  }, [allTransactions, availableMonths, selectedMonth]);
 
   const cards = [
     {
       title: t("summary.balance"),
       amount: balance,
-      change: "+12.5%",
-      changePositive: true,
+      change: formatPercentChange(changeMetrics.balance),
+      changePositive: changeMetrics.balance >= 0,
       icon: Wallet,
       iconClass: "bg-primary/10 text-primary",
       spark: dailyData.balance,
@@ -164,8 +241,8 @@ const SummaryCards = ({
     {
       title: t("summary.income"),
       amount: totalIncome,
-      change: "+8.2%",
-      changePositive: true,
+      change: formatPercentChange(changeMetrics.income),
+      changePositive: changeMetrics.income >= 0,
       icon: TrendingUp,
       iconClass:
         "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
@@ -175,8 +252,8 @@ const SummaryCards = ({
     {
       title: t("summary.expense"),
       amount: totalExpense,
-      change: "+3.1%",
-      changePositive: false,
+      change: formatPercentChange(changeMetrics.expense),
+      changePositive: changeMetrics.expense <= 0,
       icon: TrendingDown,
       iconClass: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
       spark: dailyData.expense,
