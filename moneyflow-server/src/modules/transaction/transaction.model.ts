@@ -11,6 +11,8 @@ export interface ITransaction extends Document {
   accountId: mongoose.Types.ObjectId;
   categoryId?: mongoose.Types.ObjectId;
 
+  isInitialBalance?: boolean;
+  title?: string;
   type: TransactionType;
   amount: number;
   currencyCode: CurrencyCode;
@@ -38,6 +40,10 @@ const TransactionSchema = new Schema<ITransaction>(
     },
 
     categoryId: { type: Schema.Types.ObjectId, ref: "Category" },
+
+    isInitialBalance: { type: Boolean, default: false },
+
+    title: String,
 
     type: {
       type: String,

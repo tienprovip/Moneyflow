@@ -6,6 +6,21 @@ import type { getSummaryQuerySchema } from "./transaction.validation";
 
 type SummaryQuery = z.infer<typeof getSummaryQuerySchema>;
 
+const populateTransactionRelations = <T>(query: T) =>
+  (query as {
+    populate: (
+      path: string,
+      select: string,
+    ) => {
+      populate: (
+        path: string,
+        select: string,
+      ) => unknown;
+    };
+  })
+    .populate("accountId", "name type")
+    .populate("categoryId", "name type icon color isDefault");
+
 const getCurrentMonth = (date = new Date()) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -100,7 +115,9 @@ export const createTransactionService = async (userId: string, data: any) => {
     await session.commitTransaction();
     session.endSession();
 
-    return transaction;
+    return populateTransactionRelations(
+      TransactionModel.findById(transaction._id),
+    );
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -177,7 +194,9 @@ export const updateTransactionService = async (
     await session.commitTransaction();
     session.endSession();
 
-    return transaction;
+    return populateTransactionRelations(
+      TransactionModel.findById(transaction._id),
+    );
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -242,7 +261,16 @@ export const getTransactionsService = async (userId: string, query: any) => {
     };
   }
 
-  return TransactionModel.find(filter).sort({ date: -1 });
+  const limitValue = Number(query.limit);
+  const shouldLimit = Number.isInteger(limitValue) && limitValue > 0;
+
+  const transactionQuery = TransactionModel.find(filter).sort({ date: -1 });
+
+  if (shouldLimit) {
+    transactionQuery.limit(limitValue);
+  }
+
+  return populateTransactionRelations(transactionQuery);
 };
 
 export const getSummaryService = async (

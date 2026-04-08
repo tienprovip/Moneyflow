@@ -7,6 +7,7 @@ const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export const createTransactionSchema = z.object({
   accountId: z.string(),
   categoryId: z.string().optional(),
+  title: z.string().trim().min(1).optional(),
   type: z.enum(["income", "expense"]),
   amount: z.number().positive(),
   currencyCode: z.string(),
