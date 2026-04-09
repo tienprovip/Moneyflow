@@ -19,6 +19,7 @@ import type { TransactionFilters as Filters } from "@/types/transaction";
 import { SelectValue } from "@radix-ui/react-select";
 import { format } from "date-fns";
 import { CalendarIcon, Search } from "lucide-react";
+import { memo, useCallback, useMemo } from "react";
 
 interface TransactionFiltersProps {
   filters: Filters;
@@ -29,23 +30,29 @@ interface TransactionFiltersProps {
   wallets: { id: string; name: string }[];
 }
 
-const TransactionFilters = ({
+const TransactionFilters = memo(function TransactionFilters({
   filters,
   onFiltersChange,
   sortBy,
   onSortChange,
   categories,
   wallets,
-}: TransactionFiltersProps) => {
+}: TransactionFiltersProps) {
   const { t } = useLanguage();
-  const visibleCategories =
-    filters.type === "all"
-      ? categories
-      : categories.filter((category) => category.type === filters.type);
+  const visibleCategories = useMemo(
+    () =>
+      filters.type === "all"
+        ? categories
+        : categories.filter((category) => category.type === filters.type),
+    [categories, filters.type],
+  );
 
-  const update = (patch: Partial<Filters>) => {
-    onFiltersChange({ ...filters, ...patch });
-  };
+  const update = useCallback(
+    (patch: Partial<Filters>) => {
+      onFiltersChange({ ...filters, ...patch });
+    },
+    [filters, onFiltersChange],
+  );
 
   return (
     <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6">
@@ -175,6 +182,6 @@ const TransactionFilters = ({
       </Select>
     </div>
   );
-};
+});
 
 export default TransactionFilters;

@@ -7,18 +7,24 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { useLanguage } from "@/hooks/use-language";
+import { memo, useMemo } from "react";
 
 interface Props {
   currentPage: number;
   totalPages: number;
   onPageChange: (p: number) => void;
 }
-const TransactionPagination = ({
+const TransactionPagination = memo(function TransactionPagination({
   currentPage,
   totalPages,
   onPageChange,
-}: Props) => {
+}: Props) {
   const { t } = useLanguage();
+  const pageNumbers = useMemo(
+    () => Array.from({ length: totalPages }, (_, i) => i + 1),
+    [totalPages],
+  );
+
   if (totalPages <= 1) return null;
 
   return (
@@ -37,7 +43,7 @@ const TransactionPagination = ({
               {t("pagination.previous")}
             </PaginationPrevious>
           </PaginationItem>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+          {pageNumbers.map((page) => (
             <PaginationItem key={page}>
               <PaginationLink
                 onClick={() => onPageChange(page)}
@@ -66,6 +72,6 @@ const TransactionPagination = ({
       </Pagination>
     </div>
   );
-};
+});
 
 export default TransactionPagination;

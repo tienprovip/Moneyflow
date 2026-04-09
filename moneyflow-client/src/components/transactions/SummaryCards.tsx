@@ -9,7 +9,7 @@ import {
 import { useLanguage } from "@/hooks/use-language";
 import { Transaction } from "@/types/transaction";
 import { TrendingDown, TrendingUp, Wallet } from "lucide-react";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import {
   CartesianGrid,
   Line,
@@ -20,12 +20,21 @@ import {
   YAxis,
 } from "recharts";
 
+const VND_FORMATTER = new Intl.NumberFormat("vi-VN", {
+  style: "currency",
+  currency: "VND",
+});
+
+const EMPTY_TOTALS = {
+  balance: 0,
+  expense: 0,
+  income: 0,
+};
+
 function formatVND(amount: number) {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(amount);
+  return VND_FORMATTER.format(amount);
 }
+
 function formatMonthLabel(ym: string): string {
   const [year, month] = ym.split("-");
   return `T${Number.parseInt(month)}/${year}`;
@@ -45,30 +54,36 @@ function buildDailyData(transactions: Transaction[]) {
   const incomeMap: Record<string, number> = {};
   const expenseMap: Record<string, number> = {};
 
-  transactions.forEach((t) => {
-    const day = t.date.slice(5); // "MM-DD"
-    if (t.type === "income") {
-      incomeMap[day] = (incomeMap[day] || 0) + t.amount;
+  transactions.forEach((transaction) => {
+    const day = transaction.date.slice(5);
+    if (transaction.type === "income") {
+      incomeMap[day] = (incomeMap[day] || 0) + transaction.amount;
     } else {
-      expenseMap[day] = (expenseMap[day] || 0) + t.amount;
+      expenseMap[day] = (expenseMap[day] || 0) + transaction.amount;
     }
   });
 
-  const allDays = [...new Set(transactions.map((t) => t.date.slice(5)))]
+  const allDays = [...new Set(transactions.map((item) => item.date.slice(5)))]
     .sort()
     .slice(-7);
 
-  const formatDay = (d: string) => {
-    const [m, dd] = d.split("-");
-    return `${Number.parseInt(dd)}/${Number.parseInt(m)}`;
+  const formatDay = (day: string) => {
+    const [month, date] = day.split("-");
+    return `${Number.parseInt(date)}/${Number.parseInt(month)}`;
   };
 
   return {
-    income: allDays.map((d) => ({ day: formatDay(d), v: incomeMap[d] || 0 })),
-    expense: allDays.map((d) => ({ day: formatDay(d), v: expenseMap[d] || 0 })),
-    balance: allDays.map((d) => ({
-      day: formatDay(d),
-      v: (incomeMap[d] || 0) - (expenseMap[d] || 0),
+    balance: allDays.map((day) => ({
+      day: formatDay(day),
+      v: (incomeMap[day] || 0) - (expenseMap[day] || 0),
+    })),
+    expense: allDays.map((day) => ({
+      day: formatDay(day),
+      v: expenseMap[day] || 0,
+    })),
+    income: allDays.map((day) => ({
+      day: formatDay(day),
+      v: incomeMap[day] || 0,
     })),
   };
 }
@@ -79,21 +94,6 @@ function getPreviousMonth(month: string) {
   date.setMonth(date.getMonth() - 1);
 
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function getTotals(transactions: Transaction[]) {
-  const income = transactions
-    .filter((transaction) => transaction.type === "income")
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
-  const expense = transactions
-    .filter((transaction) => transaction.type === "expense")
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
-
-  return {
-    balance: income - expense,
-    expense,
-    income,
-  };
 }
 
 function calculatePercentChange(current: number, previous: number) {
@@ -112,7 +112,7 @@ function formatPercentChange(value: number) {
   return `${sign}${roundedValue.toFixed(1)}%`;
 }
 
-function MiniLineChart({
+const MiniLineChart = memo(function MiniLineChart({
   data,
   color,
   label,
@@ -142,12 +142,12 @@ function MiniLineChart({
           tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
           axisLine={false}
           tickLine={false}
-          tickFormatter={(v) =>
-            v >= 1000000
-              ? `${(v / 1000000).toFixed(0)}M`
-              : v >= 1000
-                ? `${(v / 1000).toFixed(0)}K`
-                : v
+          tickFormatter={(value) =>
+            value >= 1000000
+              ? `${(value / 1000000).toFixed(0)}M`
+              : value >= 1000
+                ? `${(value / 1000).toFixed(0)}K`
+                : value
           }
         />
         <Tooltip
@@ -175,9 +175,9 @@ function MiniLineChart({
       </LineChart>
     </ResponsiveContainer>
   );
-}
+});
 
-const SummaryCards = ({
+const SummaryCards = memo(function SummaryCards({
   allTransactions,
   totalIncome,
   totalExpense,
@@ -185,34 +185,43 @@ const SummaryCards = ({
   onMonthChange,
   availableMonths,
   transactions,
-}: SummaryCardsProps) => {
+}: SummaryCardsProps) {
   const { t } = useLanguage();
   const balance = totalIncome - totalExpense;
 
   const dailyData = useMemo(() => buildDailyData(transactions), [transactions]);
+
+  const monthlyTotals = useMemo(() => {
+    const totals = new Map<string, typeof EMPTY_TOTALS>();
+
+    allTransactions.forEach((transaction) => {
+      const monthKey = transaction.date.slice(0, 7);
+      const currentTotals = totals.get(monthKey) ?? { ...EMPTY_TOTALS };
+
+      if (transaction.type === "income") {
+        currentTotals.income += transaction.amount;
+      } else {
+        currentTotals.expense += transaction.amount;
+      }
+
+      currentTotals.balance = currentTotals.income - currentTotals.expense;
+      totals.set(monthKey, currentTotals);
+    });
+
+    return totals;
+  }, [allTransactions]);
+
   const changeMetrics = useMemo(() => {
     const currentMonth =
       selectedMonth === "all" ? availableMonths[0] : selectedMonth;
 
     if (!currentMonth) {
-      return {
-        balance: 0,
-        expense: 0,
-        income: 0,
-      };
+      return EMPTY_TOTALS;
     }
 
     const previousMonth = getPreviousMonth(currentMonth);
-    const currentTotals = getTotals(
-      allTransactions.filter((transaction) =>
-        transaction.date.startsWith(currentMonth),
-      ),
-    );
-    const previousTotals = getTotals(
-      allTransactions.filter((transaction) =>
-        transaction.date.startsWith(previousMonth),
-      ),
-    );
+    const currentTotals = monthlyTotals.get(currentMonth) ?? EMPTY_TOTALS;
+    const previousTotals = monthlyTotals.get(previousMonth) ?? EMPTY_TOTALS;
 
     return {
       balance: calculatePercentChange(
@@ -223,86 +232,94 @@ const SummaryCards = ({
         currentTotals.expense,
         previousTotals.expense,
       ),
-      income: calculatePercentChange(currentTotals.income, previousTotals.income),
+      income: calculatePercentChange(
+        currentTotals.income,
+        previousTotals.income,
+      ),
     };
-  }, [allTransactions, availableMonths, selectedMonth]);
+  }, [availableMonths, monthlyTotals, selectedMonth]);
 
-  const cards = [
-    {
-      title: t("summary.balance"),
-      amount: balance,
-      change: formatPercentChange(changeMetrics.balance),
-      changePositive: changeMetrics.balance >= 0,
-      icon: Wallet,
-      iconClass: "bg-primary/10 text-primary",
-      spark: dailyData.balance,
-      sparkColor: "hsl(160, 84%, 39%)",
-    },
-    {
-      title: t("summary.income"),
-      amount: totalIncome,
-      change: formatPercentChange(changeMetrics.income),
-      changePositive: changeMetrics.income >= 0,
-      icon: TrendingUp,
-      iconClass:
-        "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
-      spark: dailyData.income,
-      sparkColor: "hsl(160, 84%, 39%)",
-    },
-    {
-      title: t("summary.expense"),
-      amount: totalExpense,
-      change: formatPercentChange(changeMetrics.expense),
-      changePositive: changeMetrics.expense <= 0,
-      icon: TrendingDown,
-      iconClass: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
-      spark: dailyData.expense,
-      sparkColor: "hsl(0, 72%, 51%)",
-    },
-  ];
+  const cards = useMemo(
+    () => [
+      {
+        amount: balance,
+        change: formatPercentChange(changeMetrics.balance),
+        changePositive: changeMetrics.balance >= 0,
+        icon: Wallet,
+        iconClass: "bg-primary/10 text-primary",
+        spark: dailyData.balance,
+        sparkColor: "hsl(160, 84%, 39%)",
+        title: t("summary.balance"),
+      },
+      {
+        amount: totalIncome,
+        change: formatPercentChange(changeMetrics.income),
+        changePositive: changeMetrics.income >= 0,
+        icon: TrendingUp,
+        iconClass:
+          "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
+        spark: dailyData.income,
+        sparkColor: "hsl(160, 84%, 39%)",
+        title: t("summary.income"),
+      },
+      {
+        amount: totalExpense,
+        change: formatPercentChange(changeMetrics.expense),
+        changePositive: changeMetrics.expense <= 0,
+        icon: TrendingDown,
+        iconClass:
+          "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
+        spark: dailyData.expense,
+        sparkColor: "hsl(0, 72%, 51%)",
+        title: t("summary.expense"),
+      },
+    ],
+    [balance, changeMetrics, dailyData, t, totalExpense, totalIncome],
+  );
+
   return (
     <div className="mb-6">
-      <div className="flex items-center justify-end mb-3">
+      <div className="mb-3 flex items-center justify-end">
         <Select value={selectedMonth} onValueChange={onMonthChange}>
-          <SelectTrigger className="w-35 h-8 text-xs">
+          <SelectTrigger className="h-8 w-35 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("summary.allTime")}</SelectItem>
-            {availableMonths.map((m) => (
-              <SelectItem key={m} value={m}>
-                {formatMonthLabel(m)}
+            {availableMonths.map((month) => (
+              <SelectItem key={month} value={month}>
+                {formatMonthLabel(month)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
         {cards.map((card) => (
           <Card
             key={card.title}
-            className="card-shadow hover:card-shadow-hover transition-shadow duration-200"
+            className="card-shadow transition-shadow duration-200 hover:card-shadow-hover"
           >
             <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-3">
+              <div className="mb-3 flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center ${card.iconClass}`}
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl ${card.iconClass}`}
                   >
-                    <card.icon className="w-5 h-5" />
+                    <card.icon className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">
                       {card.title}
                     </p>
-                    <p className="text-lg font-bold text-foreground text-money mt-0.5">
+                    <p className="mt-0.5 text-lg font-bold text-foreground text-money">
                       {formatVND(card.amount)}
                     </p>
                   </div>
                 </div>
                 <span
-                  className={`text-xs font-semibold px-2 py-0.5 rounded-full ${card.changePositive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}
+                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${card.changePositive ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}
                 >
                   {card.change}
                 </span>
@@ -318,6 +335,6 @@ const SummaryCards = ({
       </div>
     </div>
   );
-};
+});
 
 export default SummaryCards;

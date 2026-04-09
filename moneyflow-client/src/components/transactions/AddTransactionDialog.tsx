@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -49,14 +49,14 @@ interface Props {
   allCategories?: CategoryOption[];
 }
 
-const AddTransactionDialog = ({
+const AddTransactionDialog = memo(function AddTransactionDialog({
   open,
   onOpenChange,
   onSave,
   editingTransaction,
   wallets,
   allCategories,
-}: Props) => {
+}: Props) {
   const { t } = useLanguage();
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -69,11 +69,16 @@ const AddTransactionDialog = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const categories = useMemo(() => allCategories ?? [], [allCategories]);
-  const visibleCategories = categories.filter((category) => category.type === type);
+  const visibleCategories = useMemo(
+    () => categories.filter((category) => category.type === type),
+    [categories, type],
+  );
 
   const isEdit = !!editingTransaction;
 
   useEffect(() => {
+    if (!open) return;
+
     if (editingTransaction) {
       const matchedCategory = categories.find((option) =>
         matchesCategoryOption(option, editingTransaction.category),
@@ -101,21 +106,21 @@ const AddTransactionDialog = ({
       setWalletId(wallets[0]?.id || "");
     }
     setErrors({});
-  }, [editingTransaction, open, categories, wallets]);
+  }, [categories, editingTransaction, open, wallets]);
 
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!name.trim()) e.name = t("validation.nameRequired");
+  const validate = useCallback(() => {
+    const nextErrors: Record<string, string> = {};
     const num = parseFormattedNumber(amount);
     if (!amount || num === null || num <= 0)
-      e.amount = t("validation.amountPositive");
-    if (!category) e.category = t("validation.categoryRequired");
-    if (!walletId) e.walletId = t("dialog.walletPlaceholder");
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
+      nextErrors.amount = t("validation.amountPositive");
+    if (!category) nextErrors.category = t("validation.categoryRequired");
+    if (!walletId) nextErrors.walletId = t("dialog.walletPlaceholder");
+    if (!name.trim()) nextErrors.name = t("validation.nameRequired");
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }, [amount, category, name, t, walletId]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!validate()) return;
 
     const parsedAmount = parseFormattedNumber(amount);
@@ -147,7 +152,20 @@ const AddTransactionDialog = ({
     } finally {
       setSaving(false);
     }
-  };
+  }, [
+    amount,
+    date,
+    isEdit,
+    name,
+    notes,
+    onOpenChange,
+    onSave,
+    t,
+    type,
+    validate,
+    walletId,
+    category,
+  ]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -330,6 +348,6 @@ const AddTransactionDialog = ({
       </DialogContent>
     </Dialog>
   );
-};
+});
 
 export default AddTransactionDialog;

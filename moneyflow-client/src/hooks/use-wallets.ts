@@ -1,7 +1,13 @@
 import axiosInstance from "@/api/axios";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { getErrorMessage } from "@/lib/getErrorMessage";
+import { queryKeys } from "@/lib/query-keys";
 import { Wallet, WalletType, WALLET_COLORS } from "@/types/wallet";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type AccountResponse = {
@@ -28,6 +34,7 @@ export interface WalletMutationValues {
   type: WalletType;
 }
 
+const EMPTY_ACCOUNTS: AccountResponse[] = [];
 const WALLET_META_STORAGE_KEY = "moneyflow.walletMeta";
 
 const DEFAULT_ICON_BY_TYPE: Record<WalletType, string> = {
@@ -79,13 +86,53 @@ const mapAccountToWallet = (
   };
 };
 
+const fetchWalletAccounts = async () => {
+  const res = await axiosInstance.get<AccountResponse[]>("/account");
+  return Array.isArray(res.data) ? res.data : EMPTY_ACCOUNTS;
+};
+
 export const useWallets = () => {
-  const { toast } = useToast();
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [walletMeta, setWalletMeta] = useState<WalletMetaMap>({});
+  const queryClient = useQueryClient();
+  const [walletMeta, setWalletMeta] = useState<WalletMetaMap>(
+    getStoredWalletMeta,
+  );
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
-  const [isLoadingWallets, setIsLoadingWallets] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const walletsQuery = useQuery({
+    queryKey: queryKeys.wallets,
+    queryFn: fetchWalletAccounts,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (!walletsQuery.error) return;
+
+    toast({
+      title: "Error",
+      description: getErrorMessage(walletsQuery.error, "Failed to load wallets."),
+      variant: "destructive",
+    });
+  }, [walletsQuery.error]);
+
+  const wallets = useMemo(
+    () =>
+      (walletsQuery.data ?? EMPTY_ACCOUNTS).map((account) =>
+        mapAccountToWallet(account, walletMeta),
+      ),
+    [walletMeta, walletsQuery.data],
+  );
+
+  const resolvedSelectedWallet = useMemo(() => {
+    if (selectedWallet && wallets.some((wallet) => wallet.id === selectedWallet)) {
+      return selectedWallet;
+    }
+
+    return wallets[0]?.id ?? null;
+  }, [selectedWallet, wallets]);
 
   const selectWallet = useCallback((walletId: string) => {
     setSelectedWallet((current) => (current === walletId ? current : walletId));
@@ -114,50 +161,8 @@ export const useWallets = () => {
     });
   }, []);
 
-  const fetchWallets = useCallback(async (metaOverride?: WalletMetaMap) => {
-    const metaSource = metaOverride ?? getStoredWalletMeta();
-    const res = await axiosInstance.get<AccountResponse[]>("/account");
-    const nextWallets = res.data.map((account) =>
-      mapAccountToWallet(account, metaSource),
-    );
-
-    setWallets(nextWallets);
-    setSelectedWallet((current) => {
-      if (current && nextWallets.some((wallet) => wallet.id === current)) {
-        return current;
-      }
-
-      return nextWallets[0]?.id ?? null;
-    });
-
-    return nextWallets;
-  }, []);
-
-  useEffect(() => {
-    const storedMeta = getStoredWalletMeta();
-    setWalletMeta(storedMeta);
-
-    const loadWallets = async () => {
-      setIsLoadingWallets(true);
-
-      try {
-        await fetchWallets(storedMeta);
-      } catch (error: unknown) {
-        toast({
-          title: "Error",
-          description: getErrorMessage(error, "Failed to load wallets."),
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingWallets(false);
-      }
-    };
-
-    void loadWallets();
-  }, [fetchWallets, toast]);
-
-  const createWallet = useCallback(
-    async (values: WalletMutationValues) => {
+  const createWalletMutation = useMutation({
+    mutationFn: async (values: WalletMutationValues) => {
       const res = await axiosInstance.post<AccountResponse>("/account/create", {
         balance: values.balance,
         currencyCode: "VND",
@@ -165,28 +170,34 @@ export const useWallets = () => {
         type: values.type,
       });
 
-      const nextMeta = {
-        ...walletMeta,
-        [res.data._id]: {
-          color: values.color,
-          icon: values.icon,
-          note: values.note,
-        },
+      return {
+        account: res.data,
+        values,
       };
-
-      upsertWalletMeta(res.data._id, nextMeta[res.data._id]);
-
-      const newWallet = mapAccountToWallet(res.data, nextMeta);
-      setWallets((prev) => [newWallet, ...prev]);
-      setSelectedWallet(newWallet.id);
-
-      return newWallet;
     },
-    [upsertWalletMeta, walletMeta],
-  );
+    onSuccess: ({ account, values }) => {
+      upsertWalletMeta(account._id, {
+        color: values.color,
+        icon: values.icon,
+        note: values.note,
+      });
 
-  const updateWallet = useCallback(
-    async (walletId: string, values: WalletMutationValues) => {
+      queryClient.setQueryData<AccountResponse[]>(
+        queryKeys.wallets,
+        (previous = EMPTY_ACCOUNTS) => [account, ...previous],
+      );
+      setSelectedWallet(account._id);
+    },
+  });
+
+  const updateWalletMutation = useMutation({
+    mutationFn: async ({
+      walletId,
+      values,
+    }: {
+      walletId: string;
+      values: WalletMutationValues;
+    }) => {
       const res = await axiosInstance.put<AccountResponse>(
         `/account/update/${walletId}`,
         {
@@ -197,7 +208,70 @@ export const useWallets = () => {
         },
       );
 
-      const nextMeta = {
+      return {
+        account: res.data,
+        values,
+        walletId,
+      };
+    },
+    onSuccess: ({ account, values, walletId }) => {
+      upsertWalletMeta(walletId, {
+        color: values.color,
+        icon: values.icon,
+        note: values.note,
+      });
+
+      queryClient.setQueryData<AccountResponse[]>(
+        queryKeys.wallets,
+        (previous = EMPTY_ACCOUNTS) =>
+          previous.map((item) => (item._id === walletId ? account : item)),
+      );
+    },
+  });
+
+  const deleteWalletMutation = useMutation({
+    mutationFn: async (walletId: string) => {
+      setDeletingId(walletId);
+      await axiosInstance.delete(`/account/delete/${walletId}`);
+      return walletId;
+    },
+    onSuccess: (walletId) => {
+      queryClient.setQueryData<AccountResponse[]>(
+        queryKeys.wallets,
+        (previous = EMPTY_ACCOUNTS) =>
+          previous.filter((wallet) => wallet._id !== walletId),
+      );
+      removeWalletMeta(walletId);
+      setSelectedWallet((current) => (current === walletId ? null : current));
+    },
+    onSettled: () => {
+      setDeletingId(null);
+    },
+  });
+
+  const createWallet = useCallback(
+    async (values: WalletMutationValues) => {
+      const result = await createWalletMutation.mutateAsync(values);
+      return mapAccountToWallet(result.account, {
+        ...walletMeta,
+        [result.account._id]: {
+          color: values.color,
+          icon: values.icon,
+          note: values.note,
+        },
+      });
+    },
+    [createWalletMutation, walletMeta],
+  );
+
+  const updateWallet = useCallback(
+    async (walletId: string, values: WalletMutationValues) => {
+      const result = await updateWalletMutation.mutateAsync({
+        walletId,
+        values,
+      });
+
+      return mapAccountToWallet(result.account, {
         ...walletMeta,
         [walletId]: {
           ...walletMeta[walletId],
@@ -205,39 +279,19 @@ export const useWallets = () => {
           icon: values.icon,
           note: values.note,
         },
-      };
-
-      upsertWalletMeta(walletId, nextMeta[walletId]);
-
-      const updatedWallet = mapAccountToWallet(res.data, nextMeta);
-      setWallets((prev) =>
-        prev.map((wallet) => (wallet.id === walletId ? updatedWallet : wallet)),
-      );
-
-      return updatedWallet;
+      });
     },
-    [upsertWalletMeta, walletMeta],
+    [updateWalletMutation, walletMeta],
   );
 
   const deleteWallet = useCallback(
     async (walletId: string) => {
       if (deletingId) return false;
 
-      setDeletingId(walletId);
-
-      try {
-        await axiosInstance.delete(`/account/delete/${walletId}`);
-
-        setWallets((prev) => prev.filter((wallet) => wallet.id !== walletId));
-        removeWalletMeta(walletId);
-        setSelectedWallet((current) => (current === walletId ? null : current));
-
-        return true;
-      } finally {
-        setDeletingId(null);
-      }
+      await deleteWalletMutation.mutateAsync(walletId);
+      return true;
     },
-    [deletingId, removeWalletMeta],
+    [deleteWalletMutation, deletingId],
   );
 
   const totalBalance = useMemo(
@@ -246,17 +300,17 @@ export const useWallets = () => {
   );
 
   const selectedWalletData = useMemo(
-    () => wallets.find((wallet) => wallet.id === selectedWallet) ?? null,
-    [selectedWallet, wallets],
+    () => wallets.find((wallet) => wallet.id === resolvedSelectedWallet) ?? null,
+    [resolvedSelectedWallet, wallets],
   );
 
   return {
     createWallet,
     deleteWallet,
     deletingId,
-    isLoadingWallets,
+    isLoadingWallets: walletsQuery.isLoading,
     selectWallet,
-    selectedWallet,
+    selectedWallet: resolvedSelectedWallet,
     selectedWalletData,
     totalBalance,
     updateWallet,

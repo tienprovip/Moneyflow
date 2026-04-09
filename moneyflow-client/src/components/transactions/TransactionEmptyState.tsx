@@ -2,11 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/hooks/use-language";
 import { Plus, Receipt } from "lucide-react";
+import { memo } from "react";
 
 interface Props {
   onAddClick: () => void;
 }
-const TransactionEmptyState = ({ onAddClick }: Props) => {
+const TransactionEmptyState = memo(function TransactionEmptyState({
+  onAddClick,
+}: Props) {
   const { t } = useLanguage();
   return (
     <Card className="card-shadow">
@@ -27,6 +30,6 @@ const TransactionEmptyState = ({ onAddClick }: Props) => {
       </CardContent>
     </Card>
   );
-};
+});
 
 export default TransactionEmptyState;

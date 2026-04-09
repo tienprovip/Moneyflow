@@ -1,102 +1,66 @@
-import axios from "axios";
 import axiosInstance from "@/api/axios";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { getErrorMessage } from "@/lib/getErrorMessage";
+import { queryKeys } from "@/lib/query-keys";
 import { normalizeTransactions } from "@/lib/transaction";
 import { Transaction } from "@/types/transaction";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useCallback, useEffect } from "react";
 
 const EMPTY_TXS: Transaction[] = [];
 
+const fetchWalletTransactions = async (walletId: string) => {
+  const res = await axiosInstance.get("/transaction", {
+    params: { accountId: walletId, limit: 5 },
+  });
+
+  return normalizeTransactions(res.data);
+};
+
 export const useWalletTransactions = (walletId: string | null) => {
-  const { toast } = useToast();
-  const [walletTxs, setWalletTxs] = useState<Record<string, Transaction[]>>({});
-  const [loadingTxWalletId, setLoadingTxWalletId] = useState<string | null>(
-    null,
-  );
-
-  const setTransactionsForWallet = useCallback(
-    (targetWalletId: string, transactions: Transaction[]) => {
-      setWalletTxs((prev) => ({
-        ...prev,
-        [targetWalletId]: transactions,
-      }));
-    },
-    [],
-  );
-
-  const removeTransactionsForWallet = useCallback((targetWalletId: string) => {
-    setWalletTxs((prev) => {
-      const next = { ...prev };
-      delete next[targetWalletId];
-      return next;
-    });
-  }, []);
+  const queryClient = useQueryClient();
+  const walletTransactionsQuery = useQuery({
+    queryKey: walletId
+      ? queryKeys.walletTransactionsById(walletId)
+      : [...queryKeys.walletTransactions, "empty"],
+    queryFn: () => fetchWalletTransactions(walletId!),
+    enabled: Boolean(walletId),
+    staleTime: 30 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
 
   useEffect(() => {
-    if (!walletId) return;
-    if (walletTxs[walletId] !== undefined) return;
+    if (!walletTransactionsQuery.error) return;
 
-    const controller = new AbortController();
+    toast({
+      title: "Error",
+      description: getErrorMessage(
+        walletTransactionsQuery.error,
+        "Failed to load transactions.",
+      ),
+      variant: "destructive",
+    });
+  }, [walletTransactionsQuery.error]);
 
-    const loadTransactions = async () => {
-      setLoadingTxWalletId(walletId);
-
-      try {
-        const res = await axiosInstance.get("/transaction", {
-          params: { accountId: walletId, limit: 5 },
-          signal: controller.signal,
-        });
-
-        if (controller.signal.aborted) return;
-
-        setTransactionsForWallet(walletId, normalizeTransactions(res.data));
-      } catch (error: unknown) {
-        if (controller.signal.aborted || axios.isCancel(error)) {
-          return;
-        }
-
-        const status = axios.isAxiosError(error)
-          ? error.response?.status
-          : undefined;
-
-        if (status !== 404) {
-          toast({
-            title: "Error",
-            description: getErrorMessage(
-              error,
-              "Failed to load transactions.",
-            ),
-            variant: "destructive",
-          });
-        }
-
-        setTransactionsForWallet(walletId, []);
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoadingTxWalletId((current) =>
-            current === walletId ? null : current,
-          );
-        }
-      }
-    };
-
-    void loadTransactions();
-
-    return () => {
-      controller.abort();
-    };
-  }, [toast, walletId, walletTxs, setTransactionsForWallet]);
-
-  const selectedTxs = useMemo(
-    () => (walletId ? walletTxs[walletId] ?? EMPTY_TXS : EMPTY_TXS),
-    [walletId, walletTxs],
+  const removeTransactionsForWallet = useCallback(
+    (targetWalletId: string) => {
+      queryClient.removeQueries({
+        queryKey: queryKeys.walletTransactionsById(targetWalletId),
+        exact: true,
+      });
+    },
+    [queryClient],
   );
 
   return {
-    loadingTxWalletId,
+    loadingTxWalletId:
+      walletId && walletTransactionsQuery.isLoading ? walletId : null,
     removeTransactionsForWallet,
-    selectedTxs,
-    setTransactionsForWallet,
+    selectedTxs: walletTransactionsQuery.data ?? EMPTY_TXS,
   };
 };

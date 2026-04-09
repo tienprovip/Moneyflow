@@ -1,10 +1,11 @@
-import axios from "axios";
 import axiosInstance from "@/api/axios";
 import type { Locale } from "@/i18n/translations";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { getErrorMessage } from "@/lib/getErrorMessage";
-import { useEffect, useMemo, useState } from "react";
+import { queryKeys } from "@/lib/query-keys";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo } from "react";
 
 export type LocalizedCategoryName = {
   en?: string;
@@ -28,6 +29,13 @@ export type CategoryOption = {
   icon?: string;
   color?: string;
   isDefault?: boolean;
+};
+
+const EMPTY_CATEGORIES: CategoryResponse[] = [];
+
+const fetchCategories = async () => {
+  const res = await axiosInstance.get<CategoryResponse[]>("/category");
+  return Array.isArray(res.data) ? res.data : EMPTY_CATEGORIES;
 };
 
 const trimCategoryText = (value?: string) =>
@@ -88,48 +96,29 @@ export const matchesCategoryOption = (
 
 export const useCategories = () => {
   const { locale } = useLanguage();
-  const { toast } = useToast();
-  const [categories, setCategories] = useState<CategoryResponse[]>([]);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const categoriesQuery = useQuery({
+    queryKey: queryKeys.categories,
+    queryFn: fetchCategories,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
 
   useEffect(() => {
-    const controller = new AbortController();
+    if (!categoriesQuery.error) return;
 
-    const loadCategories = async () => {
-      setIsLoadingCategories(true);
+    toast({
+      title: "Error",
+      description: getErrorMessage(
+        categoriesQuery.error,
+        "Failed to load categories.",
+      ),
+      variant: "destructive",
+    });
+  }, [categoriesQuery.error]);
 
-      try {
-        const res = await axiosInstance.get<CategoryResponse[]>("/category", {
-          signal: controller.signal,
-        });
-
-        if (controller.signal.aborted) return;
-
-        setCategories(Array.isArray(res.data) ? res.data : []);
-      } catch (error: unknown) {
-        if (controller.signal.aborted || axios.isCancel(error)) {
-          return;
-        }
-
-        setCategories([]);
-        toast({
-          title: "Error",
-          description: getErrorMessage(error, "Failed to load categories."),
-          variant: "destructive",
-        });
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoadingCategories(false);
-        }
-      }
-    };
-
-    void loadCategories();
-
-    return () => {
-      controller.abort();
-    };
-  }, [toast]);
+  const categories = categoriesQuery.data ?? EMPTY_CATEGORIES;
 
   const categoryOptions = useMemo(
     () =>
@@ -165,6 +154,6 @@ export const useCategories = () => {
     categories,
     categoryOptions,
     categoryNames,
-    isLoadingCategories,
+    isLoadingCategories: categoriesQuery.isLoading,
   };
 };

@@ -1,4 +1,3 @@
-import axiosInstance from "@/api/axios";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import AddTransactionDialog from "@/components/transactions/AddTransactionDialog";
 import SummaryCards from "@/components/transactions/SummaryCards";
@@ -12,25 +11,59 @@ import {
   matchesCategoryOption,
   useCategories,
 } from "@/hooks/use-categories";
+import type { CategoryOption } from "@/hooks/use-categories";
 import { useLanguage } from "@/hooks/use-language";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
+import { useTransactions } from "@/hooks/use-transactions";
 import { useWallets } from "@/hooks/use-wallets";
 import { getErrorMessage } from "@/lib/getErrorMessage";
-import {
-  normalizeTransaction,
-  normalizeTransactions,
-} from "@/lib/transaction";
 import type {
   TransactionFilters as Filters,
   Transaction,
   TransactionFormValues,
 } from "@/types/transaction";
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate } from "react-router-dom";
 
 const PAGE_SIZE = 10;
+const INITIAL_FILTERS: Filters = {
+  search: "",
+  category: "all",
+  type: "all",
+  walletId: "all",
+  dateRange: { from: undefined, to: undefined },
+};
+
+type IndexedTransaction = {
+  dateValue: number;
+  searchValue: string;
+  transaction: Transaction;
+};
+
+const buildCategoryLabelMap = (categories: CategoryOption[]) => {
+  const labels: Record<string, string> = {};
+
+  categories.forEach((category) => {
+    [category.value, category.label, ...(category.aliases ?? [])].forEach(
+      (candidate) => {
+        const key = candidate.trim().toLowerCase();
+        if (!key || labels[key]) return;
+        labels[key] = category.label;
+      },
+    );
+  });
+
+  return labels;
+};
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -40,60 +73,60 @@ const Transactions = () => {
   const { isLoadingWallets, wallets: apiWallets } = useWallets();
   const { toast } = useToast();
   const hasRedirectedToWallets = useRef(false);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState<string>("newest");
   const [summaryMonth, setSummaryMonth] = useState<string>("all");
-  const [filters, setFilters] = useState<Filters>({
-    search: "",
-    category: "all",
-    type: "all",
-    walletId: "all",
-    dateRange: { from: undefined, to: undefined },
-  });
+  const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
+  const shouldLoadTransactions = !isLoadingWallets && apiWallets.length > 0;
+  const {
+    createTransaction,
+    deleteTransaction,
+    isLoadingTransactions,
+    transactions,
+    updateTransaction,
+  } = useTransactions(shouldLoadTransactions);
+  const deferredSearch = useDeferredValue(filters.search);
+
+  const walletNames = useMemo(
+    () =>
+      apiWallets.reduce<Record<string, string>>((result, wallet) => {
+        result[wallet.id] = wallet.name;
+        return result;
+      }, {}),
+    [apiWallets],
+  );
+
+  const categoryLabels = useMemo(
+    () => buildCategoryLabelMap(apiCategoryOptions),
+    [apiCategoryOptions],
+  );
 
   const categoryIdByValue = useMemo(
     () =>
       new Map(
         categories
-          .map((category) => [getCategoryValue(category.name), category._id] as const)
+          .map(
+            (category) =>
+              [getCategoryValue(category.name), category._id] as const,
+          )
           .filter(([value]) => Boolean(value)),
       ),
     [categories],
   );
 
-  const loadTransactions = useCallback(async () => {
-    setIsLoadingTransactions(true);
-
-    try {
-      const res = await axiosInstance.get("/transaction");
-      setTransactions(normalizeTransactions(res.data));
-    } catch (error: unknown) {
-      setTransactions([]);
-      toast({
-        title: "Error",
-        description: getErrorMessage(error, "Failed to load transactions."),
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoadingTransactions(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    if (isLoadingWallets) return;
-    if (apiWallets.length === 0) {
-      setTransactions([]);
-      setIsLoadingTransactions(false);
-      return;
-    }
-
-    void loadTransactions();
-  }, [apiWallets.length, isLoadingWallets, loadTransactions]);
+  const indexedTransactions = useMemo<IndexedTransaction[]>(
+    () =>
+      transactions.map((transaction) => ({
+        dateValue: new Date(transaction.date).getTime(),
+        searchValue:
+          `${transaction.name} ${transaction.description}`.toLowerCase(),
+        transaction,
+      })),
+    [transactions],
+  );
 
   useEffect(() => {
     if (isLoadingWallets) return;
@@ -108,79 +141,95 @@ const Transactions = () => {
     navigate("/wallets", { replace: true });
   }, [apiWallets.length, isLoadingWallets, navigate, t, toast]);
 
-  const filtered = useMemo(() => {
-    let result = [...transactions];
+  const selectedCategory = useMemo(
+    () =>
+      filters.category === "all"
+        ? null
+        : apiCategoryOptions.find(
+            (category) => category.value === filters.category,
+          ) ?? null,
+    [apiCategoryOptions, filters.category],
+  );
 
-    if (filters.search) {
-      const query = filters.search.toLowerCase();
-      result = result.filter(
-        (transaction) =>
-          transaction.name.toLowerCase().includes(query) ||
-          transaction.description.toLowerCase().includes(query),
-      );
+  const searchQuery = deferredSearch.trim().toLowerCase();
+  const fromTime = filters.dateRange.from?.getTime() ?? null;
+  const toTime = filters.dateRange.to?.getTime() ?? null;
+
+  const filteredTransactions = useMemo(() => {
+    let result = indexedTransactions;
+
+    if (searchQuery) {
+      result = result.filter((item) => item.searchValue.includes(searchQuery));
     }
 
-    if (filters.category !== "all") {
-      const selectedCategory = apiCategoryOptions.find(
-        (category) => category.value === filters.category,
-      );
-
+    if (selectedCategory) {
       result = result.filter(
-        (transaction) =>
+        ({ transaction }) =>
           transaction.category === filters.category ||
-          (selectedCategory
-            ? matchesCategoryOption(selectedCategory, transaction.category)
-            : false),
+          matchesCategoryOption(selectedCategory, transaction.category),
       );
     }
 
     if (filters.type !== "all") {
-      result = result.filter((transaction) => transaction.type === filters.type);
+      result = result.filter(
+        ({ transaction }) => transaction.type === filters.type,
+      );
     }
 
     if (filters.walletId !== "all") {
       result = result.filter(
-        (transaction) => transaction.walletId === filters.walletId,
+        ({ transaction }) => transaction.walletId === filters.walletId,
       );
     }
 
-    if (filters.dateRange.from) {
-      result = result.filter(
-        (transaction) => new Date(transaction.date) >= filters.dateRange.from!,
-      );
+    if (fromTime !== null) {
+      result = result.filter(({ dateValue }) => dateValue >= fromTime);
     }
 
-    if (filters.dateRange.to) {
-      result = result.filter(
-        (transaction) => new Date(transaction.date) <= filters.dateRange.to!,
-      );
+    if (toTime !== null) {
+      result = result.filter(({ dateValue }) => dateValue <= toTime);
     }
 
-    result.sort((a, b) => {
+    const sorted = [...result].sort((a, b) => {
       switch (sortBy) {
         case "oldest":
-          return new Date(a.date).getTime() - new Date(b.date).getTime();
+          return a.dateValue - b.dateValue;
         case "amount-high":
-          return b.amount - a.amount;
+          return b.transaction.amount - a.transaction.amount;
         case "amount-low":
-          return a.amount - b.amount;
+          return a.transaction.amount - b.transaction.amount;
         default:
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
+          return b.dateValue - a.dateValue;
       }
     });
 
-    return result;
-  }, [transactions, filters, sortBy, apiCategoryOptions]);
+    return sorted.map(({ transaction }) => transaction);
+  }, [
+    filters.category,
+    filters.type,
+    filters.walletId,
+    fromTime,
+    indexedTransactions,
+    searchQuery,
+    selectedCategory,
+    sortBy,
+    toTime,
+  ]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredTransactions.length / PAGE_SIZE)),
+    [filteredTransactions.length],
   );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
 
-  useEffect(() => {
-    setCurrentPage((current) => Math.min(current, totalPages));
-  }, [totalPages]);
+  const paginatedTransactions = useMemo(
+    () =>
+      filteredTransactions.slice(
+        (safeCurrentPage - 1) * PAGE_SIZE,
+        safeCurrentPage * PAGE_SIZE,
+      ),
+    [filteredTransactions, safeCurrentPage],
+  );
 
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
@@ -200,14 +249,24 @@ const Transactions = () => {
     return transactions.filter((transaction) =>
       transaction.date.startsWith(summaryMonth),
     );
-  }, [transactions, summaryMonth]);
+  }, [summaryMonth, transactions]);
 
-  const totalIncome = summaryTransactions
-    .filter((transaction) => transaction.type === "income")
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
-  const totalExpense = summaryTransactions
-    .filter((transaction) => transaction.type === "expense")
-    .reduce((sum, transaction) => sum + transaction.amount, 0);
+  const { totalExpense, totalIncome } = useMemo(
+    () =>
+      summaryTransactions.reduce(
+        (totals, transaction) => {
+          if (transaction.type === "income") {
+            totals.totalIncome += transaction.amount;
+          } else {
+            totals.totalExpense += transaction.amount;
+          }
+
+          return totals;
+        },
+        { totalExpense: 0, totalIncome: 0 },
+      ),
+    [summaryTransactions],
+  );
 
   const buildTransactionPayload = useCallback(
     (data: TransactionFormValues) => {
@@ -231,106 +290,128 @@ const Transactions = () => {
     [categoryIdByValue],
   );
 
-  const handleAdd = async (data: TransactionFormValues) => {
-    try {
-      const res = await axiosInstance.post(
-        "/transaction",
-        buildTransactionPayload(data),
-      );
+  const openCreateDialog = useCallback(() => {
+    setEditingTransaction(null);
+    setDialogOpen(true);
+  }, []);
 
-      setTransactions((prev) => [normalizeTransaction(res.data), ...prev]);
-    } catch (error: unknown) {
-      toast({
-        title: "Error",
-        description: getErrorMessage(error, "Failed to create transaction."),
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
-  const handleEdit = async (data: TransactionFormValues) => {
-    if (!editingTransaction) return;
-
-    try {
-      const res = await axiosInstance.put(
-        `/transaction/${editingTransaction.id}`,
-        buildTransactionPayload(data),
-      );
-      const updatedTransaction = normalizeTransaction(res.data);
-
-      setTransactions((prev) =>
-        prev.map((transaction) =>
-          transaction.id === editingTransaction.id
-            ? updatedTransaction
-            : transaction,
-        ),
-      );
+  const handleDialogOpenChange = useCallback((open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
       setEditingTransaction(null);
-    } catch (error: unknown) {
-      toast({
-        title: "Error",
-        description: getErrorMessage(error, "Failed to update transaction."),
-        variant: "destructive",
-      });
-      throw error;
     }
-  };
+  }, []);
 
-  const handleDelete = async (id: string) => {
-    try {
-      await axiosInstance.delete(`/transaction/${id}`);
-      setTransactions((prev) =>
-        prev.filter((transaction) => transaction.id !== id),
-      );
-    } catch (error: unknown) {
-      toast({
-        title: "Error",
-        description: getErrorMessage(error, "Failed to delete transaction."),
-        variant: "destructive",
-      });
-    }
-  };
+  const handleFiltersChange = useCallback((nextFilters: Filters) => {
+    setFilters(nextFilters);
+    setCurrentPage(1);
+  }, []);
 
-  const openEdit = (transaction: Transaction) => {
+  const handleSortChange = useCallback((nextSort: string) => {
+    setSortBy((current) => (current === nextSort ? current : nextSort));
+  }, []);
+
+  const handleSummaryMonthChange = useCallback((month: string) => {
+    setSummaryMonth((current) => (current === month ? current : month));
+  }, []);
+
+  const handleAdd = useCallback(
+    async (data: TransactionFormValues) => {
+      try {
+        await createTransaction(buildTransactionPayload(data));
+      } catch (error: unknown) {
+        toast({
+          title: "Error",
+          description: getErrorMessage(
+            error,
+            "Failed to create transaction.",
+          ),
+          variant: "destructive",
+        });
+        throw error;
+      }
+    },
+    [buildTransactionPayload, createTransaction, toast],
+  );
+
+  const handleEdit = useCallback(
+    async (data: TransactionFormValues) => {
+      if (!editingTransaction) return;
+
+      try {
+        await updateTransaction({
+          id: editingTransaction.id,
+          payload: buildTransactionPayload(data),
+        });
+        setEditingTransaction(null);
+      } catch (error: unknown) {
+        toast({
+          title: "Error",
+          description: getErrorMessage(
+            error,
+            "Failed to update transaction.",
+          ),
+          variant: "destructive",
+        });
+        throw error;
+      }
+    },
+    [buildTransactionPayload, editingTransaction, toast, updateTransaction],
+  );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await deleteTransaction(id);
+      } catch (error: unknown) {
+        toast({
+          title: "Error",
+          description: getErrorMessage(
+            error,
+            "Failed to delete transaction.",
+          ),
+          variant: "destructive",
+        });
+      }
+    },
+    [deleteTransaction, toast],
+  );
+
+  const openEdit = useCallback((transaction: Transaction) => {
     setEditingTransaction(transaction);
     setDialogOpen(true);
-  };
+  }, []);
+
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+  }, []);
+
+  const dialogSaveHandler = useMemo(
+    () => (editingTransaction ? handleEdit : handleAdd),
+    [editingTransaction, handleAdd, handleEdit],
+  );
 
   if (!isLoadingWallets && apiWallets.length === 0) {
     return null;
   }
 
   return (
-    <DashboardLayout
-      onFabClick={() => {
-        setEditingTransaction(null);
-        setDialogOpen(true);
-      }}
-    >
-      <TransactionHeader
-        onAddClick={() => {
-          setEditingTransaction(null);
-          setDialogOpen(true);
-        }}
-      />
+    <DashboardLayout onFabClick={openCreateDialog}>
+      <TransactionHeader onAddClick={openCreateDialog} />
       <SummaryCards
         allTransactions={transactions}
         totalIncome={totalIncome}
         totalExpense={totalExpense}
         selectedMonth={summaryMonth}
-        onMonthChange={setSummaryMonth}
+        onMonthChange={handleSummaryMonthChange}
         availableMonths={availableMonths}
         transactions={summaryTransactions}
       />
       <TransactionFilters
         filters={filters}
-        onFiltersChange={(nextFilters) => {
-          setFilters(nextFilters);
-          setCurrentPage(1);
-        }}
+        onFiltersChange={handleFiltersChange}
         sortBy={sortBy}
-        onSortChange={setSortBy}
+        onSortChange={handleSortChange}
         categories={apiCategoryOptions}
         wallets={apiWallets}
       />
@@ -340,41 +421,35 @@ const Transactions = () => {
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
       ) : transactions.length === 0 ? (
-        <TransactionEmptyState
-          onAddClick={() => {
-            setEditingTransaction(null);
-            setDialogOpen(true);
-          }}
-        />
+        <TransactionEmptyState onAddClick={openCreateDialog} />
       ) : isMobile ? (
         <TransactionMobileList
-          transactions={paginated}
-          onEdit={openEdit}
+          categoryLabels={categoryLabels}
+          currentPage={safeCurrentPage}
           onDelete={handleDelete}
-          currentPage={currentPage}
+          onEdit={openEdit}
+          onPageChange={handlePageChange}
           totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          wallets={apiWallets}
+          transactions={paginatedTransactions}
+          walletNames={walletNames}
         />
       ) : (
         <TransactionTable
-          transactions={paginated}
-          onEdit={openEdit}
+          categoryLabels={categoryLabels}
+          currentPage={safeCurrentPage}
           onDelete={handleDelete}
-          currentPage={currentPage}
+          onEdit={openEdit}
+          onPageChange={handlePageChange}
           totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          wallets={apiWallets}
+          transactions={paginatedTransactions}
+          walletNames={walletNames}
         />
       )}
 
       <AddTransactionDialog
         open={dialogOpen}
-        onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) setEditingTransaction(null);
-        }}
-        onSave={editingTransaction ? handleEdit : handleAdd}
+        onOpenChange={handleDialogOpenChange}
+        onSave={dialogSaveHandler}
         editingTransaction={editingTransaction}
         wallets={apiWallets}
         allCategories={apiCategoryOptions}

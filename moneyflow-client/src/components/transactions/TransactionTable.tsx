@@ -12,42 +12,36 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useLanguage } from "@/hooks/use-language";
-import type { TranslationKey } from "@/i18n/translations";
 import { formatVND } from "@/lib/format";
 import { Transaction } from "@/types/transaction";
 import { format } from "date-fns";
 import { Pencil, Trash2 } from "lucide-react";
+import { memo } from "react";
 
 interface TransactionTableProps {
-  transactions: Transaction[];
-  onEdit: (t: Transaction) => void;
-  onDelete: (id: string) => void;
+  categoryLabels: Record<string, string>;
   currentPage: number;
+  onDelete: (id: string) => void;
+  onEdit: (transaction: Transaction) => void;
+  onPageChange: (page: number) => void;
   totalPages: number;
-  onPageChange: (p: number) => void;
-  wallets: { id: string; name: string }[];
+  transactions: Transaction[];
+  walletNames: Record<string, string>;
 }
 
-const TransactionTable = ({
-  transactions,
-  onEdit,
-  onDelete,
-  currentPage,
-  totalPages,
-  onPageChange,
-  wallets,
-}: TransactionTableProps) => {
-  const { t } = useLanguage();
-  const translateCategory = (cat: string) => {
-    const key = `cat.${cat}` as TranslationKey;
-    const result = t(key);
-    return result === key ? cat : result;
-  };
+const FALLBACK_NAME = "-";
 
-  const getWalletName = (walletId?: string) => {
-    if (!walletId) return "—";
-    return wallets.find((w) => w.id === walletId)?.name || "—";
-  };
+const TransactionTable = memo(function TransactionTable({
+  categoryLabels,
+  currentPage,
+  onDelete,
+  onEdit,
+  onPageChange,
+  totalPages,
+  transactions,
+  walletNames,
+}: TransactionTableProps) {
+  const { t } = useLanguage();
 
   return (
     <Card className="card-shadow overflow-hidden">
@@ -59,80 +53,89 @@ const TransactionTable = ({
             <TableHead>{t("table.wallet")}</TableHead>
             <TableHead>{t("table.date")}</TableHead>
             <TableHead>{t("table.amount")}</TableHead>
-            <TableHead className="text-right w-25">
+            <TableHead className="w-25 text-right">
               {t("table.actions")}
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {transactions.map((tx) => (
-            <TableRow
-              key={tx.id}
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => onEdit(tx)}
-            >
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <CategoryIcon
-                    category={tx.category}
-                    iconName={tx.categoryIcon}
-                    colorClassName={tx.categoryColor}
-                  />
-                  <div>
-                    <p className="font-medium text-foreground">{tx.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {tx.description}
-                    </p>
+          {transactions.map((transaction) => {
+            const normalizedCategory = transaction.category.trim().toLowerCase();
+            const walletName = transaction.walletId
+              ? walletNames[transaction.walletId] || FALLBACK_NAME
+              : FALLBACK_NAME;
+
+            return (
+              <TableRow
+                key={transaction.id}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => onEdit(transaction)}
+              >
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <CategoryIcon
+                      category={transaction.category}
+                      iconName={transaction.categoryIcon}
+                      colorClassName={transaction.categoryColor}
+                    />
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {transaction.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {transaction.description}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge variant="secondary" className="font-normal">
-                  {translateCategory(tx.category)}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-muted-foreground text-sm">
-                {getWalletName(tx.walletId)}
-              </TableCell>
-              <TableCell className="text-muted-foreground text-sm">
-                {format(new Date(tx.date), "dd/MM/yyyy")}
-              </TableCell>
-              <TableCell>
-                <span
-                  className={`font-semibold text-money ${tx.type === "income" ? "text-positive" : "text-negative"}`}
-                >
-                  {tx.type === "income" ? "+" : "-"}
-                  {formatVND(tx.amount)}
-                </span>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(tx);
-                    }}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary" className="font-normal">
+                    {categoryLabels[normalizedCategory] || transaction.category}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {walletName}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {format(new Date(transaction.date), "dd/MM/yyyy")}
+                </TableCell>
+                <TableCell>
+                  <span
+                    className={`font-semibold text-money ${transaction.type === "income" ? "text-positive" : "text-negative"}`}
                   >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(tx.id);
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+                    {transaction.type === "income" ? "+" : "-"}
+                    {formatVND(transaction.amount)}
+                  </span>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 cursor-pointer"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onEdit(transaction);
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 cursor-pointer text-destructive hover:text-destructive"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onDelete(transaction.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
       <TransactionPagination
@@ -142,6 +145,6 @@ const TransactionTable = ({
       />
     </Card>
   );
-};
+});
 
 export default TransactionTable;

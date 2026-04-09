@@ -1,12 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/hooks/use-language";
 import { Plus } from "lucide-react";
+import { memo } from "react";
 
 interface TransactionHeaderProps {
   onAddClick: () => void;
 }
 
-const TransactionHeader = ({ onAddClick }: TransactionHeaderProps) => {
+const TransactionHeader = memo(function TransactionHeader({
+  onAddClick,
+}: TransactionHeaderProps) {
   const { t } = useLanguage();
 
   return (
@@ -23,6 +26,6 @@ const TransactionHeader = ({ onAddClick }: TransactionHeaderProps) => {
       </Button>
     </div>
   );
-};
+});
 
 export default TransactionHeader;

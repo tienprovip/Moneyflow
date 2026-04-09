@@ -3,119 +3,118 @@ import TransactionPagination from "@/components/transactions/TransactionPaginati
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useLanguage } from "@/hooks/use-language";
-import type { TranslationKey } from "@/i18n/translations";
 import { formatVND } from "@/lib/format";
 import { Transaction } from "@/types/transaction";
 import { format } from "date-fns";
 import { Pencil, Trash2 } from "lucide-react";
+import { memo } from "react";
 
 interface Props {
-  transactions: Transaction[];
-  onEdit: (t: Transaction) => void;
-  onDelete: (id: string) => void;
+  categoryLabels: Record<string, string>;
   currentPage: number;
+  onDelete: (id: string) => void;
+  onEdit: (transaction: Transaction) => void;
+  onPageChange: (page: number) => void;
   totalPages: number;
-  onPageChange: (p: number) => void;
-  wallets: { id: string; name: string }[];
+  transactions: Transaction[];
+  walletNames: Record<string, string>;
 }
 
-const TransactionMobileList = ({
-  transactions,
-  onEdit,
-  onDelete,
+const FALLBACK_NAME = "-";
+
+const TransactionMobileList = memo(function TransactionMobileList({
+  categoryLabels,
   currentPage,
-  totalPages,
+  onDelete,
+  onEdit,
   onPageChange,
-  wallets,
-}: Props) => {
-  const { t } = useLanguage();
-
-  const translateCategory = (cat: string) => {
-    const key = `cat.${cat}` as TranslationKey;
-    const result = t(key);
-    return result === key ? cat : result;
-  };
-
-  const getWalletName = (walletId?: string) => {
-    if (!walletId) return "—";
-    return wallets.find((w) => w.id === walletId)?.name || "—";
-  };
+  totalPages,
+  transactions,
+  walletNames,
+}: Props) {
   return (
     <div className="space-y-3">
-      {transactions.map((tx) => (
-        <Card
-          key={tx.id}
-          className="card-shadow hover:card-shadow-hover transition-shadow cursor-pointer"
-          onClick={() => onEdit(tx)}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <CategoryIcon
-                category={tx.category}
-                iconName={tx.categoryIcon}
-                colorClassName={tx.categoryColor}
-                size="sm"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-foreground text-sm">
-                      {tx.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {tx.description}
-                    </p>
-                  </div>
-                  <span
-                    className={`font-semibold text-sm text-money whitespace-nowrap ${tx.type === "income" ? "text-positive" : "text-negative"}`}
-                  >
-                    {tx.type === "income" ? "+" : "-"}
-                    {formatVND(tx.amount)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="font-normal text-xs">
-                      {translateCategory(tx.category)}
-                    </Badge>
-                    <Badge variant="outline" className="font-normal text-xs">
-                      {getWalletName(tx.walletId)}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {format(new Date(tx.date), "dd/MM")}
+      {transactions.map((transaction) => {
+        const normalizedCategory = transaction.category.trim().toLowerCase();
+        const walletName = transaction.walletId
+          ? walletNames[transaction.walletId] || FALLBACK_NAME
+          : FALLBACK_NAME;
+
+        return (
+          <Card
+            key={transaction.id}
+            className="card-shadow cursor-pointer transition-shadow hover:card-shadow-hover"
+            onClick={() => onEdit(transaction)}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <CategoryIcon
+                  category={transaction.category}
+                  iconName={transaction.categoryIcon}
+                  colorClassName={transaction.categoryColor}
+                  size="sm"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {transaction.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {transaction.description}
+                      </p>
+                    </div>
+                    <span
+                      className={`whitespace-nowrap text-sm font-semibold text-money ${transaction.type === "income" ? "text-positive" : "text-negative"}`}
+                    >
+                      {transaction.type === "income" ? "+" : "-"}
+                      {formatVND(transaction.amount)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(tx);
-                      }}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(tx.id);
-                      }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                  <div className="mt-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-xs font-normal">
+                        {categoryLabels[normalizedCategory] ||
+                          transaction.category}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs font-normal">
+                        {walletName}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(transaction.date), "dd/MM")}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onEdit(transaction);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onDelete(transaction.id);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
       <TransactionPagination
         currentPage={currentPage}
         totalPages={totalPages}
@@ -123,6 +122,6 @@ const TransactionMobileList = ({
       />
     </div>
   );
-};
+});
 
 export default TransactionMobileList;

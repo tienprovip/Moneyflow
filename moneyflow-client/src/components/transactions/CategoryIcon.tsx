@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { memo } from "react";
 
 const ICON_MAP: Record<string, LucideIcon> = {
   Banknote,
@@ -36,7 +37,7 @@ type CategoryIconProps = {
   size?: "sm" | "md";
 };
 
-export function CategoryIcon(props: CategoryIconProps) {
+export const CategoryIcon = memo(function CategoryIcon(props: CategoryIconProps) {
   const { iconName, colorClassName, size = "md" } = props;
   const IconComp = iconName ? ICON_MAP[iconName] || HelpCircle : HelpCircle;
   const sizeClass = size === "sm" ? "h-8 w-8" : "h-10 w-10";
@@ -53,4 +54,4 @@ export function CategoryIcon(props: CategoryIconProps) {
       <IconComp className={iconSize} />
     </div>
   );
-}
+});
