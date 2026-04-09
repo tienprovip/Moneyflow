@@ -24,6 +24,7 @@ import {
 import type {
   TransactionFilters as Filters,
   Transaction,
+  TransactionFormValues,
 } from "@/types/transaction";
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -209,7 +210,7 @@ const Transactions = () => {
     .reduce((sum, transaction) => sum + transaction.amount, 0);
 
   const buildTransactionPayload = useCallback(
-    (data: Omit<Transaction, "id" | "status">) => {
+    (data: TransactionFormValues) => {
       if (!data.walletId) {
         throw new Error("Wallet is required.");
       }
@@ -230,7 +231,7 @@ const Transactions = () => {
     [categoryIdByValue],
   );
 
-  const handleAdd = async (data: Omit<Transaction, "id" | "status">) => {
+  const handleAdd = async (data: TransactionFormValues) => {
     try {
       const res = await axiosInstance.post(
         "/transaction",
@@ -248,7 +249,7 @@ const Transactions = () => {
     }
   };
 
-  const handleEdit = async (data: Omit<Transaction, "id" | "status">) => {
+  const handleEdit = async (data: TransactionFormValues) => {
     if (!editingTransaction) return;
 
     try {

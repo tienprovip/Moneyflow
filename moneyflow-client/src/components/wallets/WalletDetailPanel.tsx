@@ -121,7 +121,11 @@ const WalletDetailPanel = React.memo(function WalletDetailPanel({
                 key={tx.id}
                 className="flex items-center gap-3 py-2 border-b border-border last:border-0"
               >
-                <CategoryIcon category={tx.category} />
+                <CategoryIcon
+                  category={tx.category}
+                  iconName={tx.categoryIcon}
+                  colorClassName={tx.categoryColor}
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">
                     {tx.name}

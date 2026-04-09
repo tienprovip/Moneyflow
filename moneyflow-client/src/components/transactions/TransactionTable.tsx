@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useLanguage } from "@/hooks/use-language";
+import type { TranslationKey } from "@/i18n/translations";
 import { formatVND } from "@/lib/format";
 import { Transaction } from "@/types/transaction";
 import { format } from "date-fns";
@@ -38,7 +39,7 @@ const TransactionTable = ({
 }: TransactionTableProps) => {
   const { t } = useLanguage();
   const translateCategory = (cat: string) => {
-    const key = `cat.${cat}` as any;
+    const key = `cat.${cat}` as TranslationKey;
     const result = t(key);
     return result === key ? cat : result;
   };
@@ -72,7 +73,11 @@ const TransactionTable = ({
             >
               <TableCell>
                 <div className="flex items-center gap-3">
-                  <CategoryIcon category={tx.category} />
+                  <CategoryIcon
+                    category={tx.category}
+                    iconName={tx.categoryIcon}
+                    colorClassName={tx.categoryColor}
+                  />
                   <div>
                     <p className="font-medium text-foreground">{tx.name}</p>
                     <p className="text-xs text-muted-foreground">

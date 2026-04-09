@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/hooks/use-language";
+import type { TranslationKey } from "@/i18n/translations";
 import { formatVND } from "@/lib/format";
 import { Transaction } from "@/types/transaction";
 import { format } from "date-fns";
@@ -31,7 +32,7 @@ const TransactionMobileList = ({
   const { t } = useLanguage();
 
   const translateCategory = (cat: string) => {
-    const key = `cat.${cat}` as any;
+    const key = `cat.${cat}` as TranslationKey;
     const result = t(key);
     return result === key ? cat : result;
   };
@@ -50,7 +51,12 @@ const TransactionMobileList = ({
         >
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <CategoryIcon category={tx.category} size="sm" />
+              <CategoryIcon
+                category={tx.category}
+                iconName={tx.categoryIcon}
+                colorClassName={tx.categoryColor}
+                size="sm"
+              />
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div>

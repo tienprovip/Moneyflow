@@ -43,6 +43,23 @@ const readCategoryName = (value: unknown) => {
   return readLocalizedText(record.name) || readString(record.label);
 };
 
+const readCategoryMeta = (value: unknown) => {
+  const record = readObject(value);
+  if (!record) {
+    return {
+      name: "",
+      icon: "",
+      color: "",
+    };
+  }
+
+  return {
+    name: readCategoryName(record),
+    icon: readString(record.icon),
+    color: readString(record.color),
+  };
+};
+
 const normalizeDate = (value: unknown) => {
   const raw = readString(value);
   if (!raw) return "";
@@ -58,12 +75,21 @@ export const normalizeTransaction = (
   const amount = Number(tx.amount ?? 0);
   const note = readString(tx.note) || readString(tx.notes);
   const categoryId = readId(tx.categoryId);
+  const categoryMeta = readCategoryMeta(tx.categoryId);
   const walletId = readId(tx.walletId) || readId(tx.accountId);
   const category =
     readString(tx.category) ||
     readString(tx.categoryName) ||
-    readCategoryName(tx.categoryId) ||
+    categoryMeta.name ||
     "Other";
+  const categoryIcon =
+    readString(tx.categoryIcon) ||
+    readString(tx.icon) ||
+    categoryMeta.icon;
+  const categoryColor =
+    readString(tx.categoryColor) ||
+    readString(tx.color) ||
+    categoryMeta.color;
 
   return {
     id: readId(tx._id) || readId(tx.id) || String(index),
@@ -73,6 +99,8 @@ export const normalizeTransaction = (
     type: tx.type === "income" ? "income" : "expense",
     category,
     categoryId: categoryId || undefined,
+    categoryIcon: categoryIcon || undefined,
+    categoryColor: categoryColor || undefined,
     date: normalizeDate(tx.date ?? tx.createdAt),
     status: tx.status === "pending" ? "pending" : "completed",
     notes: note || undefined,

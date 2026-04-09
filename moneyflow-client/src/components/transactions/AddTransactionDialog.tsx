@@ -38,12 +38,12 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/use-language";
-import type { Transaction } from "@/types/transaction";
+import type { Transaction, TransactionFormValues } from "@/types/transaction";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: Omit<Transaction, "id" | "status">) => Promise<void> | void;
+  onSave: (data: TransactionFormValues) => Promise<void> | void;
   editingTransaction: Transaction | null;
   wallets: { id: string; name: string }[];
   allCategories?: CategoryOption[];
