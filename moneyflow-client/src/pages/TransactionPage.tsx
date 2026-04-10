@@ -6,6 +6,7 @@ import TransactionFilters from "@/components/transactions/TransactionFilters";
 import TransactionHeader from "@/components/transactions/TransactionHeader";
 import TransactionMobileList from "@/components/transactions/TransactionMobileList";
 import TransactionTable from "@/components/transactions/TransactionTable";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   getCategoryValue,
   matchesCategoryOption,
@@ -81,6 +82,7 @@ const Transactions = () => {
   const [summaryMonth, setSummaryMonth] = useState<string>("all");
   const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
   const shouldLoadTransactions = !isLoadingWallets && apiWallets.length > 0;
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const {
     createTransaction,
     deleteTransaction,
@@ -145,9 +147,9 @@ const Transactions = () => {
     () =>
       filters.category === "all"
         ? null
-        : apiCategoryOptions.find(
+        : (apiCategoryOptions.find(
             (category) => category.value === filters.category,
-          ) ?? null,
+          ) ?? null),
     [apiCategoryOptions, filters.category],
   );
 
@@ -322,10 +324,7 @@ const Transactions = () => {
       } catch (error: unknown) {
         toast({
           title: "Error",
-          description: getErrorMessage(
-            error,
-            "Failed to create transaction.",
-          ),
+          description: getErrorMessage(error, "Failed to create transaction."),
           variant: "destructive",
         });
         throw error;
@@ -347,10 +346,7 @@ const Transactions = () => {
       } catch (error: unknown) {
         toast({
           title: "Error",
-          description: getErrorMessage(
-            error,
-            "Failed to update transaction.",
-          ),
+          description: getErrorMessage(error, "Failed to update transaction."),
           variant: "destructive",
         });
         throw error;
@@ -359,23 +355,24 @@ const Transactions = () => {
     [buildTransactionPayload, editingTransaction, toast, updateTransaction],
   );
 
-  const handleDelete = useCallback(
-    async (id: string) => {
-      try {
-        await deleteTransaction(id);
-      } catch (error: unknown) {
-        toast({
-          title: "Error",
-          description: getErrorMessage(
-            error,
-            "Failed to delete transaction.",
-          ),
-          variant: "destructive",
-        });
-      }
-    },
-    [deleteTransaction, toast],
-  );
+  const handleDelete = useCallback((id: string) => {
+    setDeleteId(id);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteId) return;
+    try {
+      await deleteTransaction(deleteId);
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "Failed to delete transaction."),
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteId(null);
+    }
+  }, [deleteId, deleteTransaction, toast]);
 
   const openEdit = useCallback((transaction: Transaction) => {
     setEditingTransaction(transaction);
@@ -453,6 +450,14 @@ const Transactions = () => {
         editingTransaction={editingTransaction}
         wallets={apiWallets}
         allCategories={apiCategoryOptions}
+      />
+
+      <ConfirmDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+        onConfirm={() => {
+          void handleConfirmDelete();
+        }}
       />
     </DashboardLayout>
   );

@@ -248,6 +248,14 @@ const translations = {
     vi: "Vui lòng nhập số dư",
     en: "Balance is required",
   },
+  "validation.balanceInvalid": {
+    vi: "Vui lòng nhập số dư hợp lệ",
+    en: "Please enter a valid balance",
+  },
+  "validation.noteTooLong": {
+    vi: "Ghi chú không được vượt quá 255 ký tự",
+    en: "Notes must not exceed 255 characters",
+  },
 
   // Confirm dialog
   "confirm.deleteTitle": { vi: "Xác nhận xóa", en: "Confirm delete" },
