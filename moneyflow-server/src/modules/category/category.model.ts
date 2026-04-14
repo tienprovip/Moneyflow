@@ -4,6 +4,7 @@ import { LocalizedText, localizedTextSchema } from "../../shared/localized";
 export enum CategoryType {
   INCOME = "income",
   EXPENSE = "expense",
+  TRANSFER = "transfer",
 }
 
 export interface ICategory extends Document {

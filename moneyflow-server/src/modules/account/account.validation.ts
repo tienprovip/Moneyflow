@@ -11,6 +11,9 @@ export const createAccountSchema = z.object({
   initialAmount: z.number().optional(),
   interestRate: z.number().optional(),
   termMonths: z.number().optional(),
+  startDate: z.string().or(z.date()).optional(),
+  sourceAccountId: z.string().optional(),
+  status: z.string().optional(),
 });
 
 export const updateAccountSchema = createAccountSchema.partial();

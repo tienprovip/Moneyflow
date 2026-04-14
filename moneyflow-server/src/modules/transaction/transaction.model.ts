@@ -4,11 +4,13 @@ import { CurrencyCode } from "../../shared/currency";
 export enum TransactionType {
   INCOME = "income",
   EXPENSE = "expense",
+  TRANSFER = "transfer",
 }
 
 export interface ITransaction extends Document {
   userId: mongoose.Types.ObjectId;
   accountId: mongoose.Types.ObjectId;
+  toAccountId?: mongoose.Types.ObjectId;
   categoryId?: mongoose.Types.ObjectId;
 
   isInitialBalance?: boolean;
@@ -36,6 +38,12 @@ const TransactionSchema = new Schema<ITransaction>(
       type: Schema.Types.ObjectId,
       ref: "Account",
       required: true,
+      index: true,
+    },
+
+    toAccountId: {
+      type: Schema.Types.ObjectId,
+      ref: "Account",
       index: true,
     },
 

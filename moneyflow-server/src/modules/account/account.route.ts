@@ -11,5 +11,6 @@ router.get("/", controller.getAccounts);
 router.get("/:id", controller.getAccountById);
 router.put("/update/:id", controller.updateAccount);
 router.delete("/delete/:id", controller.deleteAccount);
+router.post("/settle/:id", controller.settleAccount);
 
 export default router;

@@ -9,6 +9,11 @@ export enum AccountType {
   SAVING = "saving",
 }
 
+export enum AccountStatus {
+  ACTIVE = "active",
+  SETTLED = "settled",
+}
+
 export interface IAccount extends Document {
   userId: mongoose.Types.ObjectId;
   name: string;
@@ -19,6 +24,8 @@ export interface IAccount extends Document {
 
   // Saving
   initialAmount?: number;
+  sourceAccountId?: mongoose.Types.ObjectId;
+  status?: AccountStatus;
   interestRate?: number;
   termMonths?: number;
   startDate?: Date;
@@ -54,6 +61,12 @@ const AccountSchema = new Schema<IAccount>(
 
     // saving fields
     initialAmount: Number,
+    sourceAccountId: { type: Schema.Types.ObjectId, ref: "Account" },
+    status: {
+      type: String,
+      enum: Object.values(AccountStatus),
+      default: AccountStatus.ACTIVE,
+    },
     interestRate: Number,
     termMonths: Number,
     startDate: Date,

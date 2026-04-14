@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import AccountModel, { AccountType } from "./account.model";
+import AccountModel, { AccountType, AccountStatus } from "./account.model";
 import CategoryModel, { CategoryType } from "../category/category.model";
 import TransactionModel, {
   ITransaction,
@@ -41,7 +41,7 @@ const getSignedTransactionAmount = (transaction: ITransaction) =>
 const findOrCreateInitialBalanceCategory = async (
   userId: string,
   session: mongoose.ClientSession,
-  transactionType: TransactionType,
+  transactionType: TransactionType.INCOME | TransactionType.EXPENSE,
 ) => {
   const config = INITIAL_BALANCE_CATEGORY_CONFIG[transactionType];
 
@@ -197,10 +197,12 @@ export const createAccountService = async (userId: string, data: any) => {
       accountData.initialAmount = data.initialAmount || 0;
       accountData.interestRate = data.interestRate || 0;
       accountData.termMonths = data.termMonths || 0;
-      accountData.startDate = new Date();
+      accountData.startDate = data.startDate ? new Date(data.startDate) : new Date();
+      accountData.sourceAccountId = data.sourceAccountId;
+      accountData.status = data.status || AccountStatus.ACTIVE;
 
       if (data.termMonths) {
-        const maturityDate = new Date();
+        const maturityDate = new Date(accountData.startDate as Date);
         maturityDate.setMonth(maturityDate.getMonth() + data.termMonths);
         accountData.maturityDate = maturityDate;
       }
@@ -209,6 +211,29 @@ export const createAccountService = async (userId: string, data: any) => {
     const [account] = await AccountModel.create([accountData], { session });
 
     if (shouldCreateInitialBalanceTransaction) {
+      if (data.type === AccountType.SAVING && data.sourceAccountId) {
+        const sourceAccount = await AccountModel.findById(data.sourceAccountId).session(session);
+        if (!sourceAccount) throw new Error("Source account not found");
+        
+        sourceAccount.balance -= normalizedInitialBalance;
+        await sourceAccount.save({ session });
+
+        await TransactionModel.create([{
+          accountId: sourceAccount._id,
+          toAccountId: account._id,
+          amount: normalizedInitialBalance,
+          currencyCode: account.currencyCode,
+          date: accountData.startDate as Date,
+          isInitialBalance: true,
+          note: "Gửi tiết kiệm",
+          title: "Gửi tiết kiệm",
+          type: TransactionType.TRANSFER,
+          userId,
+        }], { session });
+
+        account.balance = normalizedInitialBalance;
+        await account.save({ session });
+      } else {
       const initialTransactionType = getTransactionTypeByAmount(
         normalizedInitialBalance,
       );
@@ -222,22 +247,23 @@ export const createAccountService = async (userId: string, data: any) => {
       await account.save({ session });
 
       await TransactionModel.create(
-        [
-          {
-            accountId: account._id,
-            amount: Math.abs(normalizedInitialBalance),
-            categoryId: category._id,
-            currencyCode: account.currencyCode,
-            date: new Date(),
-            isInitialBalance: true,
-            note: INITIAL_BALANCE_TITLE,
-            title: INITIAL_BALANCE_TITLE,
-            type: initialTransactionType,
-            userId,
-          },
-        ],
-        { session },
-      );
+          [
+            {
+              accountId: account._id,
+              amount: Math.abs(normalizedInitialBalance),
+              categoryId: category._id,
+              currencyCode: account.currencyCode,
+              date: new Date(),
+              isInitialBalance: true,
+              note: INITIAL_BALANCE_TITLE,
+              title: INITIAL_BALANCE_TITLE,
+              type: initialTransactionType,
+              userId,
+            },
+          ],
+          { session },
+        );
+      }
     }
 
     await session.commitTransaction();
@@ -338,6 +364,59 @@ export const deleteAccountService = async (
     }).session(session);
 
     await account.deleteOne({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return account;
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
+
+export const settleAccountService = async (userId: string, accountId: string) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const account = await AccountModel.findOne({ _id: accountId, userId }).session(session);
+    if (!account || account.type !== AccountType.SAVING) {
+      throw new Error("Saving account not found or not a saving account");
+    }
+    
+    if (account.status === "settled") {
+      throw new Error("Account already settled");
+    }
+
+    const currentBalance = account.balance || 0;
+
+    if (account.sourceAccountId) {
+      const sourceAccount = await AccountModel.findById(account.sourceAccountId).session(session);
+      if (sourceAccount) {
+        sourceAccount.balance += currentBalance;
+        await sourceAccount.save({ session });
+
+        if (currentBalance > 0) {
+          await TransactionModel.create([{
+            accountId: account._id,
+            toAccountId: sourceAccount._id,
+            amount: currentBalance,
+            currencyCode: account.currencyCode,
+            date: new Date(),
+            note: "Tất toán sổ tiết kiệm",
+            title: "Tất toán sổ tiết kiệm",
+            type: TransactionType.TRANSFER,
+            userId,
+          }], { session });
+        }
+      }
+    }
+
+    account.status = AccountStatus.SETTLED;
+    account.balance = 0;
+    await account.save({ session });
 
     await session.commitTransaction();
     session.endSession();
