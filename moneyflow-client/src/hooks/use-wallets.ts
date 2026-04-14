@@ -86,9 +86,12 @@ const mapAccountToWallet = (
   };
 };
 
+const ALLOWED_WALLET_TYPES = ["cash", "bank", "ewallet", "credit"];
+
 const fetchWalletAccounts = async () => {
   const res = await axiosInstance.get<AccountResponse[]>("/account");
-  return Array.isArray(res.data) ? res.data : EMPTY_ACCOUNTS;
+  if (!Array.isArray(res.data)) return EMPTY_ACCOUNTS;
+  return res.data.filter((acc) => ALLOWED_WALLET_TYPES.includes(acc.type));
 };
 
 export const useWallets = () => {
