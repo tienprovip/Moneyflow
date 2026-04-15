@@ -18,6 +18,11 @@ type TranslationKey =
   | "auth.refreshTokenRequired"
   | "auth.logoutSuccess"
   | "account.notFound"
+  | "account.alreadySettled"
+  | "account.settlementAccountRequired"
+  | "account.settlementAccountInvalid"
+  | "account.insufficientSourceBalance"
+  | "account.sourceAccountInvalid"
   | "account.deletedSuccess"
   | "category.notFound"
   | "category.deletedSuccess"
@@ -53,6 +58,15 @@ const dictionaries: Record<Language, Dictionary> = {
     "auth.refreshTokenRequired": "Refresh token required",
     "auth.logoutSuccess": "Logged out successfully",
     "account.notFound": "Account not found",
+    "account.alreadySettled": "Saving account already settled",
+    "account.settlementAccountRequired":
+      "Please select an account to receive settlement funds",
+    "account.settlementAccountInvalid":
+      "Selected settlement account is invalid",
+    "account.insufficientSourceBalance":
+      "Insufficient balance in linked account",
+    "account.sourceAccountInvalid":
+      "Linked source account is invalid",
     "account.deletedSuccess": "Deleted successfully",
     "category.notFound": "Category not found",
     "category.deletedSuccess": "Deleted successfully",
@@ -87,6 +101,15 @@ const dictionaries: Record<Language, Dictionary> = {
     "auth.refreshTokenRequired": "Cần refresh token",
     "auth.logoutSuccess": "Đăng xuất thành công",
     "account.notFound": "Không tìm thấy tài khoản",
+    "account.alreadySettled": "Sổ tiết kiệm đã tất toán",
+    "account.settlementAccountRequired":
+      "Vui lòng chọn tài khoản nhận tiền tất toán",
+    "account.settlementAccountInvalid":
+      "Tài khoản nhận tiền không hợp lệ",
+    "account.insufficientSourceBalance":
+      "Số dư tại tài khoản liên kết không đủ",
+    "account.sourceAccountInvalid":
+      "Tài khoản liên kết không hợp lệ",
     "account.deletedSuccess": "Xóa thành công",
     "category.notFound": "Không tìm thấy danh mục",
     "category.deletedSuccess": "Xóa thành công",
@@ -118,6 +141,7 @@ const fieldLabels: Record<string, Record<Language, string>> = {
   initialAmount: { en: "Initial amount", vi: "Số tiền ban đầu" },
   interestRate: { en: "Interest rate", vi: "Lãi suất" },
   termMonths: { en: "Term months", vi: "Kỳ hạn (tháng)" },
+  targetAccountId: { en: "Settlement account", vi: "Tài khoản nhận tiền" },
   icon: { en: "Icon", vi: "Biểu tượng" },
   color: { en: "Color", vi: "Màu sắc" },
   month: { en: "Month", vi: "Tháng" },

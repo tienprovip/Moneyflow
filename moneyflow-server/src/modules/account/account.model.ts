@@ -30,6 +30,10 @@ export interface IAccount extends Document {
   termMonths?: number;
   startDate?: Date;
   maturityDate?: Date;
+  settledAmount?: number;
+  settledInterest?: number;
+  settledAt?: Date;
+  settlementAccountId?: mongoose.Types.ObjectId;
 
   createdAt: Date;
   updatedAt: Date;
@@ -71,6 +75,10 @@ const AccountSchema = new Schema<IAccount>(
     termMonths: Number,
     startDate: Date,
     maturityDate: Date,
+    settledAmount: Number,
+    settledInterest: Number,
+    settledAt: Date,
+    settlementAccountId: { type: Schema.Types.ObjectId, ref: "Account" },
   },
   { timestamps: true },
 );

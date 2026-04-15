@@ -1,24 +1,16 @@
 import mongoose from "mongoose";
 import TransactionModel, { TransactionType } from "./transaction.model";
-import AccountModel from "../account/account.model";
+import AccountModel, { AccountType } from "../account/account.model";
+import { settleDueSavingsForUser } from "../account/account.service";
 import type { z } from "zod";
 import type { getSummaryQuerySchema } from "./transaction.validation";
 
 type SummaryQuery = z.infer<typeof getSummaryQuerySchema>;
 
 const populateTransactionRelations = <T>(query: T) =>
-  (query as {
-    populate: (
-      path: string,
-      select: string,
-    ) => {
-      populate: (
-        path: string,
-        select: string,
-      ) => unknown;
-    };
-  })
+  (query as any)
     .populate("accountId", "name type")
+    .populate("toAccountId", "name type")
     .populate("categoryId", "name type icon color isDefault");
 
 const getCurrentMonth = (date = new Date()) => {
@@ -249,6 +241,8 @@ export const deleteTransactionService = async (
 };
 
 export const getTransactionsService = async (userId: string, query: any) => {
+  await settleDueSavingsForUser(userId);
+
   const filter: any = { userId };
 
   if (query.accountId) filter.accountId = query.accountId;
@@ -277,17 +271,34 @@ export const getSummaryService = async (
   userId: string,
   query: SummaryQuery,
 ) => {
+  await settleDueSavingsForUser(userId);
+
   const { start, end } = getSummaryRange(query);
+  const savingAccountIds = await AccountModel.find({
+    userId,
+    type: AccountType.SAVING,
+  }).distinct("_id");
+
+  const summaryMatch: Record<string, unknown> = {
+    userId: new mongoose.Types.ObjectId(userId),
+    date: { $gte: start, $lt: end },
+    type: { $in: [TransactionType.INCOME, TransactionType.EXPENSE] },
+  };
+
+  if (savingAccountIds.length > 0) {
+    summaryMatch.$or = [
+      { type: { $ne: TransactionType.INCOME } },
+      { isInitialBalance: { $ne: true } },
+      { accountId: { $nin: savingAccountIds } },
+    ];
+  }
 
   const summary = await TransactionModel.aggregate<{
     _id: TransactionType;
     total: number;
   }>([
     {
-      $match: {
-        userId: new mongoose.Types.ObjectId(userId),
-        date: { $gte: start, $lt: end },
-      },
+      $match: summaryMatch,
     },
     {
       $group: {

@@ -17,3 +17,7 @@ export const createAccountSchema = z.object({
 });
 
 export const updateAccountSchema = createAccountSchema.partial();
+
+export const settleAccountSchema = z.object({
+  targetAccountId: z.string().optional(),
+});
