@@ -18,11 +18,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useLanguage } from "@/hooks/use-language";
-import { useToast } from "@/hooks/use-toast";
-import { useSavings, SavingsWallet } from "@/hooks/use-savings";
-import { useWallets } from "@/hooks/use-wallets";
-import { getErrorMessage } from "@/lib/getErrorMessage";
 import {
   Select,
   SelectContent,
@@ -30,12 +25,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useLanguage } from "@/hooks/use-language";
+import { useToast } from "@/hooks/use-toast";
+import { SavingsWallet, useSavings } from "@/hooks/use-savings";
+import { useWallets } from "@/hooks/use-wallets";
 import {
   formatFormattedNumberInput,
   formatFormattedNumberValue,
   parseFormattedNumber,
 } from "@/lib/formatted-number";
+import { getErrorMessage } from "@/lib/getErrorMessage";
+import { cn } from "@/lib/utils";
 import {
+  CalendarIcon,
   CheckCircle2,
   Edit2,
   PiggyBank,
@@ -43,26 +45,74 @@ import {
   Trash2,
   TrendingUp,
   Wallet,
-  CalendarIcon,
 } from "lucide-react";
 import { format } from "date-fns";
 import React, { useCallback, useMemo, useReducer, useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-function calculateCompoundInterest(
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+type SavingProjection = {
+  maturityDate: Date;
+  savingDays: number;
+  interestEarned: number;
+  finalAmount: number;
+};
+
+function addMonths(date: Date, months: number) {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + months);
+  return next;
+}
+
+function toStartOfDay(date: Date) {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
+function getDayDifference(startDate: Date, endDate: Date) {
+  const start = toStartOfDay(startDate).getTime();
+  const end = toStartOfDay(endDate).getTime();
+  if (end <= start) return 0;
+  return Math.floor((end - start) / MS_PER_DAY);
+}
+
+function calculateSavingProjection(
   principal: number,
   annualRate: number,
-  months: number,
-) {
-  const monthlyRate = annualRate / 12 / 100;
-  const finalAmount = principal * Math.pow(1 + monthlyRate, months);
-  return { finalAmount, interestEarned: finalAmount - principal };
+  startDate: Date,
+  termMonths: number,
+): SavingProjection {
+  const maturityDate = addMonths(startDate, termMonths);
+  const savingDays = getDayDifference(startDate, maturityDate);
+  const interestEarned =
+    principal * (annualRate / 100) * (savingDays / 365);
+  return {
+    maturityDate,
+    savingDays,
+    interestEarned: Math.max(0, interestEarned),
+    finalAmount: Math.max(0, principal + interestEarned),
+  };
 }
 
 function formatVND(value: number): string {
   return new Intl.NumberFormat("vi-VN").format(Math.round(value));
+}
+
+function parseDateValue(value?: string) {
+  if (!value) return new Date();
+
+  const dateOnly = value.includes("T") ? value.slice(0, 10) : value;
+  const match = dateOnly.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    const [, year, month, day] = match;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
 interface FormState {
@@ -106,19 +156,23 @@ function formReducer(state: FormState, action: FormAction): FormState {
 const SavingPage = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
-
-  const { savings: wallets, createSaving, updateSaving, deleteSaving, settleSaving } = useSavings();
+  const {
+    createSaving,
+    deleteSaving,
+    savings: wallets,
+    settleSaving,
+    updateSaving,
+  } = useSavings();
   const { wallets: sourceWallets } = useWallets();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [editingWallet, setEditingWallet] = useState<SavingsWallet | null>(
-    null,
-  );
+  const [editingWallet, setEditingWallet] = useState<SavingsWallet | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [settleId, setSettleId] = useState<string | null>(null);
-
+  const [settleTargetAccountId, setSettleTargetAccountId] = useState("");
+  const [isSettling, setIsSettling] = useState(false);
   const [form, dispatch] = useReducer(formReducer, INITIAL_FORM);
 
   const setField =
@@ -136,14 +190,14 @@ const SavingPage = () => {
     dispatch({
       type: "SET_FIELD",
       field: "startDate",
-      value: new Date().toISOString().split("T")[0]
+      value: new Date().toISOString().split("T")[0],
     });
     setDialogOpen(true);
   }, [resetForm]);
 
   const openEdit = useCallback((wallet: SavingsWallet) => {
-    const start = wallet.startDate ? new Date(wallet.startDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
-    
+    const start = format(parseDateValue(wallet.startDate), "yyyy-MM-dd");
+
     dispatch({
       type: "LOAD",
       payload: {
@@ -160,27 +214,60 @@ const SavingPage = () => {
     setDialogOpen(true);
   }, []);
 
+  const openSettleDialog = useCallback(
+    (wallet: SavingsWallet) => {
+      const hasLinkedSource = Boolean(
+        wallet.sourceAccountId &&
+          sourceWallets.some((item) => item.id === wallet.sourceAccountId),
+      );
+      setSettleId(wallet.id);
+      setSettleTargetAccountId(
+        hasLinkedSource ? wallet.sourceAccountId! : (sourceWallets[0]?.id || ""),
+      );
+    },
+    [sourceWallets],
+  );
+
+  const closeSettleDialog = useCallback(() => {
+    setSettleId(null);
+    setSettleTargetAccountId("");
+    setIsSettling(false);
+  }, []);
+
   const getParsedForm = () => ({
     dep: parseFormattedNumber(form.deposit) ?? 0,
     r: Number.parseFloat(form.rate),
-    m: Number.parseInt(form.term),
+    m: Number.parseInt(form.term, 10),
   });
 
-  const validate = (): boolean => {
+  const validate = useCallback((): boolean => {
     const { dep, r, m } = getParsedForm();
-    const e: Record<string, string> = {};
-    if (!form.name.trim()) e.name = t("validation.nameRequired");
-    if (!form.deposit || Number.isNaN(dep) || dep <= 0)
-      e.deposit = t("validation.amountPositive");
-    if (!form.rate || Number.isNaN(r) || r <= 0)
-      e.rate = t("validation.ratePositive");
-    if (!form.term || Number.isNaN(m) || m <= 0)
-      e.term = t("validation.termPositive");
-    if (!form.startDate)
-      e.startDate = "Vui lòng chọn ngày bắt đầu";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
+    const nextErrors: Record<string, string> = {};
+
+    if (!form.name.trim()) nextErrors.name = t("validation.nameRequired");
+    if (!form.deposit || Number.isNaN(dep) || dep <= 0) {
+      nextErrors.deposit = t("validation.amountPositive");
+    }
+    if (!form.rate || Number.isNaN(r) || r <= 0) {
+      nextErrors.rate = t("validation.ratePositive");
+    }
+    if (!form.term || Number.isNaN(m) || m <= 0) {
+      nextErrors.term = t("validation.termPositive");
+    }
+    if (!form.startDate) {
+      nextErrors.startDate = t("savings.startDateRequired");
+    }
+
+    if (!editingWallet && form.sourceAccountId !== "none") {
+      const sourceWallet = sourceWallets.find((w) => w.id === form.sourceAccountId);
+      if (!sourceWallet || sourceWallet.balance < dep) {
+        nextErrors.deposit = t("savings.insufficientSourceBalance");
+      }
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  }, [editingWallet, form, sourceWallets, t]);
 
   const handleSave = useCallback(async () => {
     if (!validate() || isSaving) return;
@@ -192,37 +279,49 @@ const SavingPage = () => {
         name: form.name.trim(),
         initialDeposit: dep,
         interestRate: r,
-        termMonths: m,
         note: form.note.trim(),
-        sourceAccountId: form.sourceAccountId === "none" ? undefined : form.sourceAccountId,
+        sourceAccountId:
+          form.sourceAccountId === "none" ? undefined : form.sourceAccountId,
         startDate: form.startDate,
+        termMonths: m,
       };
 
       if (editingWallet) {
         await updateSaving(editingWallet.id, payload);
-
         toast({
           title: t("savings.updated"),
           description: t("savings.updatedDesc"),
         });
       } else {
         await createSaving(payload);
-
-        toast({ title: t("savings.added"), description: t("savings.addedDesc") });
+        toast({
+          title: t("savings.added"),
+          description: t("savings.addedDesc"),
+        });
       }
 
       setDialogOpen(false);
       resetForm();
     } catch (error) {
       toast({
-        title: "Error",
-        description: getErrorMessage(error, "Failed to save saving wallet"),
-        variant: "destructive"
+        title: t("toast.errorTitle"),
+        description: getErrorMessage(error, t("savings.saveFailedDesc")),
+        variant: "destructive",
       });
     } finally {
       setIsSaving(false);
     }
-  }, [editingWallet, form, t, toast, resetForm, validate, isSaving, createSaving, updateSaving]);
+  }, [
+    createSaving,
+    editingWallet,
+    form,
+    isSaving,
+    resetForm,
+    t,
+    toast,
+    updateSaving,
+    validate,
+  ]);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -234,61 +333,121 @@ const SavingPage = () => {
         });
       } catch (error) {
         toast({
-          title: "Error",
-          description: getErrorMessage(error, "Failed to delete saving wallet"),
-          variant: "destructive"
+          title: t("toast.errorTitle"),
+          description: getErrorMessage(error, t("savings.deleteFailedDesc")),
+          variant: "destructive",
         });
       } finally {
         setDeleteId(null);
       }
     },
-    [t, toast, deleteSaving],
+    [deleteSaving, t, toast],
   );
 
-  const handleSettle = useCallback(
-    async (id: string) => {
-      try {
-        await settleSaving(id);
-        toast({
-          title: "Đã tất toán",
-          description: "Sổ tiết kiệm đã được tất toán thành công.",
-        });
-      } catch (error) {
-        toast({
-          title: "Lỗi",
-          description: getErrorMessage(error, "Không thể tất toán sổ tiết kiệm"),
-          variant: "destructive"
-        });
-      } finally {
-        setSettleId(null);
-      }
-    },
-    [settleSaving, toast],
+  const settleWallet = useMemo(
+    () => wallets.find((wallet) => wallet.id === settleId) ?? null,
+    [settleId, wallets],
   );
+  const hasValidLinkedSource = useMemo(
+    () =>
+      Boolean(
+        settleWallet?.sourceAccountId &&
+          sourceWallets.some((wallet) => wallet.id === settleWallet.sourceAccountId),
+      ),
+    [settleWallet?.sourceAccountId, sourceWallets],
+  );
+  const requiresSettleTargetAccount = Boolean(
+    settleWallet && !hasValidLinkedSource,
+  );
+
+  const handleSettle = useCallback(async () => {
+    if (!settleWallet || isSettling) return;
+
+    if (requiresSettleTargetAccount && !settleTargetAccountId) {
+      toast({
+        title: t("toast.errorTitle"),
+        description: t("savings.settleTargetRequired"),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSettling(true);
+    try {
+      await settleSaving(
+        settleWallet.id,
+        requiresSettleTargetAccount ? settleTargetAccountId : undefined,
+      );
+      toast({
+        title: t("savings.settled"),
+        description: t("savings.settledDesc"),
+      });
+      closeSettleDialog();
+    } catch (error) {
+      toast({
+        title: t("toast.errorTitle"),
+        description: getErrorMessage(error, t("savings.settleFailedDesc")),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSettling(false);
+    }
+  }, [
+    closeSettleDialog,
+    isSettling,
+    requiresSettleTargetAccount,
+    settleSaving,
+    settleTargetAccountId,
+    settleWallet,
+    t,
+    toast,
+  ]);
 
   const walletsWithCalc = useMemo(
     () =>
-      wallets.map((w) => ({
-        ...w,
-        ...calculateCompoundInterest(
-          w.initialDeposit,
-          w.interestRate,
-          w.termMonths,
-        ),
-      })),
+      wallets.map((wallet) => {
+        const startDate = parseDateValue(wallet.startDate);
+        const projection = calculateSavingProjection(
+          wallet.initialDeposit,
+          wallet.interestRate,
+          startDate,
+          wallet.termMonths,
+        );
+        const interestEarned =
+          wallet.status === "settled"
+            ? (wallet.settledInterest ?? projection.interestEarned)
+            : projection.interestEarned;
+        const finalAmount =
+          wallet.status === "settled"
+            ? (wallet.settledAmount ?? wallet.initialDeposit + interestEarned)
+            : projection.finalAmount;
+
+        return {
+          ...wallet,
+          finalAmount,
+          interestEarned,
+          maturityDate: wallet.maturityDate ?? projection.maturityDate.toISOString(),
+        };
+      }),
     [wallets],
   );
 
-  const activeWallets = useMemo(() => walletsWithCalc.filter(w => w.status !== "settled"), [walletsWithCalc]);
-  const settledWallets = useMemo(() => walletsWithCalc.filter(w => w.status === "settled"), [walletsWithCalc]);
+  const activeWallets = useMemo(
+    () => walletsWithCalc.filter((wallet) => wallet.status !== "settled"),
+    [walletsWithCalc],
+  );
+  const settledWallets = useMemo(
+    () => walletsWithCalc.filter((wallet) => wallet.status === "settled"),
+    [walletsWithCalc],
+  );
 
   const { totalDeposit, totalFinal, totalInterest } = useMemo(
     () =>
       activeWallets.reduce(
-        (acc, w) => ({
-          totalDeposit: acc.totalDeposit + w.initialDeposit,
-          totalFinal: acc.totalFinal + w.finalAmount,
-          totalInterest: acc.totalInterest + w.interestEarned,
+        (acc, wallet) => ({
+          totalDeposit: acc.totalDeposit + wallet.initialDeposit,
+          totalFinal: acc.totalFinal + wallet.finalAmount,
+          totalInterest: acc.totalInterest + wallet.interestEarned,
         }),
         { totalDeposit: 0, totalFinal: 0, totalInterest: 0 },
       ),
@@ -297,24 +456,18 @@ const SavingPage = () => {
 
   const previewCalc = useMemo(() => {
     const dep = parseFormattedNumber(form.deposit);
-    const r = Number.parseFloat(form.rate);
-    const m = Number.parseInt(form.term);
-    if (dep > 0 && r > 0 && m > 0) {
-      return calculateCompoundInterest(dep, r, m);
-    }
-    return null;
-  }, [form.deposit, form.rate, form.term]);
-
-  const endDatePreview = useMemo(() => {
-    if (!form.startDate || !form.term || isNaN(parseInt(form.term))) return null;
-    const d = new Date(form.startDate);
-    d.setMonth(d.getMonth() + parseInt(form.term));
-    return d.toLocaleDateString("vi-VN");
-  }, [form.startDate, form.term]);
+    const rate = Number.parseFloat(form.rate);
+    const term = Number.parseInt(form.term, 10);
+    if (!form.startDate) return null;
+    if (!dep || dep <= 0 || Number.isNaN(dep)) return null;
+    if (!rate || rate <= 0 || Number.isNaN(rate)) return null;
+    if (!term || term <= 0 || Number.isNaN(term)) return null;
+    return calculateSavingProjection(dep, rate, parseDateValue(form.startDate), term);
+  }, [form.deposit, form.rate, form.startDate, form.term]);
 
   return (
     <DashboardLayout onFabClick={openAdd}>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">
             {t("savings.pageTitle")}
@@ -329,7 +482,6 @@ const SavingPage = () => {
         </Button>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <Card>
           <CardContent className="p-4 sm:p-6">
@@ -386,8 +538,9 @@ const SavingPage = () => {
 
       <div className="space-y-8">
         <div>
-          <h2 className="text-lg font-semibold mb-4 text-foreground">Danh sách Sổ tiết kiệm</h2>
-          {/* Active Wallets List */}
+          <h2 className="text-lg font-semibold mb-4 text-foreground">
+            {t("savings.activeListTitle")}
+          </h2>
           {activeWallets.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -408,38 +561,42 @@ const SavingPage = () => {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {activeWallets.map((w) => (
-                <Card key={w.id} className="relative group">
+              {activeWallets.map((wallet) => (
+                <Card key={wallet.id} className="relative group">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle className="text-base">{w.name}</CardTitle>
+                        <CardTitle className="text-base">{wallet.name}</CardTitle>
                         <CardDescription className="mt-1">
-                          {w.termMonths} {t("savings.monthUnit")} • {w.interestRate}%/{t("savings.yearUnit")}
-                          {w.sourceAccountId && <span className="block text-xs mt-0.5 text-orange-500">Có liên kết tài khoản nguồn</span>}
-                          {w.note && (
-                            <span className="block text-xs mt-0.5">{w.note}</span>
+                          {wallet.termMonths} {t("savings.monthUnit")} • {wallet.interestRate}%/{t("savings.yearUnit")}
+                          {wallet.sourceAccountId && (
+                            <span className="block text-xs mt-0.5 text-orange-500">
+                              {t("savings.linkedSourceBadge")}
+                            </span>
+                          )}
+                          {wallet.note && (
+                            <span className="block text-xs mt-0.5">{wallet.note}</span>
                           )}
                         </CardDescription>
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
-                          onClick={() => setSettleId(w.id)}
-                          title="Tất toán sổ này"
+                          onClick={() => openSettleDialog(wallet)}
+                          title={t("savings.settleAction")}
                           className="p-1.5 rounded-md hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-500 transition-colors"
                         >
                           <CheckCircle2 className="w-4 h-4" />
                         </button>
-                         <button
-                          onClick={() => openEdit(w)}
-                          title="Sửa thông tin"
+                        <button
+                          onClick={() => openEdit(wallet)}
+                          title={t("savings.editAction")}
                           className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => setDeleteId(w.id)}
-                          title="Xoá sổ"
+                          onClick={() => setDeleteId(wallet.id)}
+                          title={t("savings.deleteAction")}
                           className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -454,7 +611,7 @@ const SavingPage = () => {
                           {t("savings.depositLabel")}
                         </p>
                         <p className="text-sm font-semibold text-foreground">
-                          {formatVND(w.initialDeposit)}đ
+                          {formatVND(wallet.initialDeposit)}đ
                         </p>
                       </div>
                       <div className="bg-muted/50 rounded-lg p-3">
@@ -462,17 +619,21 @@ const SavingPage = () => {
                           {t("savings.interestLabel")}
                         </p>
                         <p className="text-sm font-semibold text-emerald-500">
-                          +{formatVND(w.interestEarned)}đ
+                          +{formatVND(wallet.interestEarned)}đ
                         </p>
                       </div>
                     </div>
                     <div className="mt-3 bg-primary/5 rounded-lg p-3 border border-primary/10">
                       <p className="text-[11px] text-muted-foreground">
                         {t("savings.receivedLabel")}
-                        {w.maturityDate && <span className="ml-1 opacity-70">(Ngày nhận: {new Date(w.maturityDate).toLocaleDateString("vi-VN")})</span>}
+                        {wallet.maturityDate && (
+                          <span className="ml-1 opacity-70">
+                            ({t("savings.receiveDate")}: {parseDateValue(wallet.maturityDate).toLocaleDateString("vi-VN")})
+                          </span>
+                        )}
                       </p>
                       <p className="text-lg font-bold text-primary">
-                        {formatVND(w.finalAmount)}đ
+                        {formatVND(wallet.finalAmount)}đ
                       </p>
                     </div>
                   </CardContent>
@@ -484,22 +645,26 @@ const SavingPage = () => {
 
         {settledWallets.length > 0 && (
           <div>
-            <h2 className="text-lg font-semibold mb-4 text-muted-foreground">Sổ đã tất toán</h2>
+            <h2 className="text-lg font-semibold mb-4 text-muted-foreground">
+              {t("savings.settledListTitle")}
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {settledWallets.map((w) => (
-                <Card key={w.id} className="relative bg-muted/20 border-dashed">
+              {settledWallets.map((wallet) => (
+                <Card key={wallet.id} className="relative bg-muted/20 border-dashed">
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle className="text-sm text-muted-foreground line-through decoration-muted-foreground/30">{w.name}</CardTitle>
+                        <CardTitle className="text-sm text-muted-foreground line-through decoration-muted-foreground/30">
+                          {wallet.name}
+                        </CardTitle>
                         <CardDescription className="text-xs mt-1">
-                          {formatVND(w.finalAmount)}đ • {w.termMonths} tháng
+                          {formatVND(wallet.finalAmount)}đ • {wallet.termMonths} {t("savings.monthUnit")}
                         </CardDescription>
                       </div>
                       <div className="flex gap-1">
                         <button
-                          onClick={() => setDeleteId(w.id)}
-                          title="Xóa vĩnh viễn"
+                          onClick={() => setDeleteId(wallet.id)}
+                          title={t("savings.deleteAction")}
                           className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -514,7 +679,6 @@ const SavingPage = () => {
         )}
       </div>
 
-      {/* Add/Edit Dialog */}
       <Dialog
         open={dialogOpen}
         onOpenChange={(open) => {
@@ -550,18 +714,29 @@ const SavingPage = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t("savings.linkedWalletLabel")}</Label>
-                <Select value={form.sourceAccountId} onValueChange={(val) => dispatch({ type: "SET_FIELD", field: "sourceAccountId", value: val })}>
-                  <SelectTrigger disabled={!!editingWallet}>
-                    <SelectValue placeholder="Chọn..." />
+                <Select
+                  value={form.sourceAccountId}
+                  onValueChange={(value) =>
+                    dispatch({ type: "SET_FIELD", field: "sourceAccountId", value })
+                  }
+                >
+                  <SelectTrigger disabled={Boolean(editingWallet)}>
+                    <SelectValue placeholder={t("savings.selectPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">-- Không liên kết --</SelectItem>
-                    {sourceWallets.map(w => (
-                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                    <SelectItem value="none">{t("savings.noLinkOption")}</SelectItem>
+                    {sourceWallets.map((wallet) => (
+                      <SelectItem key={wallet.id} value={wallet.id}>
+                        {wallet.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {editingWallet && <p className="text-[10px] text-muted-foreground">Không thể đổi nguồn sau khi tạo</p>}
+                {editingWallet && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {t("savings.sourceLockedHint")}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>{t("savings.depositDateLabel")}</Label>
@@ -571,22 +746,33 @@ const SavingPage = () => {
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !form.startDate && "text-muted-foreground"
+                        !form.startDate && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {form.startDate ? format(new Date(form.startDate), "dd/MM/yyyy") : t("savings.depositDatePlaceholder")}
+                      {form.startDate
+                        ? format(parseDateValue(form.startDate), "dd/MM/yyyy")
+                        : t("savings.depositDatePlaceholder")}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
-                      selected={form.startDate ? new Date(form.startDate) : undefined}
-                      onSelect={(date) => dispatch({ type: "SET_FIELD", field: "startDate", value: date ? format(date, "yyyy-MM-dd") : "" })}
+                      selected={form.startDate ? parseDateValue(form.startDate) : undefined}
+                      onSelect={(date) =>
+                        dispatch({
+                          type: "SET_FIELD",
+                          field: "startDate",
+                          value: date ? format(date, "yyyy-MM-dd") : "",
+                        })
+                      }
                       className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
+                {errors.startDate && (
+                  <p className="text-xs text-destructive">{errors.startDate}</p>
+                )}
               </div>
             </div>
 
@@ -597,11 +783,11 @@ const SavingPage = () => {
                 inputMode="numeric"
                 placeholder="10,000,000"
                 value={form.deposit}
-                onChange={(e) =>
+                onChange={(event) =>
                   dispatch({
                     type: "SET_FIELD",
                     field: "deposit",
-                    value: formatFormattedNumberInput(e.target.value),
+                    value: formatFormattedNumberInput(event.target.value),
                   })
                 }
               />
@@ -609,7 +795,7 @@ const SavingPage = () => {
                 <p className="text-xs text-destructive">{errors.deposit}</p>
               )}
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t("savings.rateLabel")}</Label>
@@ -639,6 +825,7 @@ const SavingPage = () => {
                 )}
               </div>
             </div>
+
             <div className="space-y-2">
               <Label>{t("savings.noteLabel")}</Label>
               <Input
@@ -652,28 +839,22 @@ const SavingPage = () => {
               <div className="bg-muted/50 rounded-lg p-4 space-y-2 border">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t("savings.preview")}</span>
-                  {endDatePreview && <span className="font-medium text-foreground">{endDatePreview}</span>}
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {t("savings.depositLabel")}
-                  </span>
                   <span className="font-medium text-foreground">
-                    {form.deposit}đ
+                    {format(previewCalc.maturityDate, "dd/MM/yyyy")}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {t("savings.interestLabel")}
-                  </span>
+                  <span className="text-muted-foreground">{t("savings.depositLabel")}</span>
+                  <span className="font-medium text-foreground">{form.deposit}đ</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{t("savings.interestLabel")}</span>
                   <span className="font-medium text-emerald-500">
                     +{formatVND(previewCalc.interestEarned)}đ
                   </span>
                 </div>
                 <div className="border-t pt-2 flex justify-between text-sm">
-                  <span className="font-medium text-foreground">
-                    {t("savings.receivedLabel")}
-                  </span>
+                  <span className="font-medium text-foreground">{t("savings.receivedLabel")}</span>
                   <span className="font-bold text-primary">
                     {formatVND(previewCalc.finalAmount)}đ
                   </span>
@@ -691,26 +872,74 @@ const SavingPage = () => {
             >
               {t("dialog.cancel")}
             </Button>
-            <Button onClick={handleSave} disabled={isSaving}>{t("savings.saveBtn")}</Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {t("savings.saveBtn")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(settleId)} onOpenChange={(open) => !open && closeSettleDialog()}>
+        <DialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <DialogTitle>{t("savings.settleDialogTitle")}</DialogTitle>
+            <DialogDescription>
+              {requiresSettleTargetAccount
+                ? t("savings.settleDialogDescNoLink")
+                : t("savings.settleDialogDescLinked")}
+            </DialogDescription>
+          </AlertDialogHeader>
+
+          {requiresSettleTargetAccount && (
+            <div className="space-y-2 py-2">
+              <Label>{t("savings.settleTargetLabel")}</Label>
+              <Select
+                value={settleTargetAccountId}
+                onValueChange={setSettleTargetAccountId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("savings.settleTargetPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {sourceWallets.map((wallet) => (
+                    <SelectItem key={wallet.id} value={wallet.id}>
+                      {wallet.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {sourceWallets.length === 0 && (
+                <p className="text-xs text-destructive">
+                  {t("savings.noSettlementWallet")}
+                </p>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={closeSettleDialog} disabled={isSettling}>
+              {t("dialog.cancel")}
+            </Button>
+            <Button
+              onClick={() => void handleSettle()}
+              disabled={
+                isSettling ||
+                (requiresSettleTargetAccount &&
+                  (!settleTargetAccountId || sourceWallets.length === 0))
+              }
+            >
+              {t("savings.settleConfirmBtn")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <ConfirmDialog
-        open={!!deleteId}
+        open={Boolean(deleteId)}
         onOpenChange={(open) => !open && setDeleteId(null)}
         onConfirm={() => {
           if (deleteId) void handleDelete(deleteId);
         }}
-      />
-       <ConfirmDialog
-        open={!!settleId}
-        onOpenChange={(open) => !open && setSettleId(null)}
-        onConfirm={() => {
-          if (settleId) void handleSettle(settleId);
-        }}
-        title="Xác nhận tất toán"
-        description="Bạn có chắc chắn muốn tất toán sổ tiết kiệm này? Tiền sẽ được cộng lại vào tài khoản liên kết (nếu có)."
       />
     </DashboardLayout>
   );

@@ -19,6 +19,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useWallets } from "@/hooks/use-wallets";
 import { getErrorMessage } from "@/lib/getErrorMessage";
+import {
+  shouldCountAsExpense,
+  shouldCountAsIncome,
+} from "@/lib/transaction-report";
 import type {
   TransactionFilters as Filters,
   Transaction,
@@ -257,9 +261,11 @@ const Transactions = () => {
     () =>
       summaryTransactions.reduce(
         (totals, transaction) => {
-          if (transaction.type === "income") {
+          if (shouldCountAsIncome(transaction)) {
             totals.totalIncome += transaction.amount;
-          } else {
+          }
+
+          if (shouldCountAsExpense(transaction)) {
             totals.totalExpense += transaction.amount;
           }
 
@@ -375,6 +381,7 @@ const Transactions = () => {
   }, [deleteId, deleteTransaction, toast]);
 
   const openEdit = useCallback((transaction: Transaction) => {
+    if (transaction.type === "transfer") return;
     setEditingTransaction(transaction);
     setDialogOpen(true);
   }, []);

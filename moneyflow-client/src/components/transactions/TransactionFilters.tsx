@@ -113,6 +113,7 @@ const TransactionFilters = memo(function TransactionFilters({
           <SelectItem value="all">{t("filter.allTypes")}</SelectItem>
           <SelectItem value="income">{t("filter.income")}</SelectItem>
           <SelectItem value="expense">{t("filter.expense")}</SelectItem>
+          <SelectItem value="transfer">{t("filter.transfer")}</SelectItem>
         </SelectContent>
       </Select>
 

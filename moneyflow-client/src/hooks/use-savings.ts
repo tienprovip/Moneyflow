@@ -18,6 +18,10 @@ export interface AccountResponse {
   sourceAccountId?: string;
   startDate?: string;
   maturityDate?: string;
+  settledAmount?: number;
+  settledInterest?: number;
+  settledAt?: string;
+  settlementAccountId?: string;
 }
 
 type SavingUiMeta = {
@@ -38,6 +42,10 @@ export interface SavingsWallet {
   sourceAccountId?: string;
   startDate: string;
   maturityDate?: string;
+  settledAmount?: number;
+  settledInterest?: number;
+  settledAt?: string;
+  settlementAccountId?: string;
 }
 
 export interface SavingMutationValues {
@@ -89,6 +97,10 @@ const mapAccountToSaving = (
     sourceAccountId: account.sourceAccountId,
     startDate: account.startDate || new Date().toISOString(),
     maturityDate: account.maturityDate,
+    settledAmount: account.settledAmount,
+    settledInterest: account.settledInterest,
+    settledAt: account.settledAt,
+    settlementAccountId: account.settlementAccountId,
   };
 };
 
@@ -181,6 +193,9 @@ export const useSavings = () => {
         [...queryKeys.wallets, "savings"],
         (previous = EMPTY_SAVINGS) => [account, ...previous],
       );
+
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
     },
   });
 
@@ -223,6 +238,9 @@ export const useSavings = () => {
         (previous = EMPTY_SAVINGS) =>
           previous.map((item) => (item._id === walletId ? account : item)),
       );
+
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
     },
   });
 
@@ -239,6 +257,9 @@ export const useSavings = () => {
           previous.filter((wallet) => wallet._id !== walletId),
       );
       removeSavingMeta(walletId);
+
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
     },
     onSettled: () => {
       setDeletingId(null);
@@ -247,8 +268,19 @@ export const useSavings = () => {
 
   
   const settleSavingMutation = useMutation({
-    mutationFn: async (walletId: string) => {
-      const res = await axiosInstance.post<AccountResponse>(`/account/settle/${walletId}`);
+    mutationFn: async ({
+      walletId,
+      targetAccountId,
+    }: {
+      walletId: string;
+      targetAccountId?: string;
+    }) => {
+      const res = await axiosInstance.post<AccountResponse>(
+        `/account/settle/${walletId}`,
+        {
+          targetAccountId,
+        },
+      );
       return res.data;
     },
     onSuccess: (account) => {
@@ -257,12 +289,18 @@ export const useSavings = () => {
         (previous = EMPTY_SAVINGS) =>
           previous.map((item) => (item._id === account._id ? account : item)),
       );
+
+      void queryClient.invalidateQueries({ queryKey: queryKeys.wallets });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
     },
   });
 
   const settleSaving = useCallback(
-    async (walletId: string) => {
-      await settleSavingMutation.mutateAsync(walletId);
+    async (walletId: string, targetAccountId?: string) => {
+      await settleSavingMutation.mutateAsync({
+        walletId,
+        targetAccountId,
+      });
     },
     [settleSavingMutation]
   );

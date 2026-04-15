@@ -16,6 +16,14 @@ axiosInstance.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  if (typeof window !== "undefined") {
+    const lang = window.localStorage.getItem("moneyflow-lang");
+    if (lang === "vi" || lang === "en") {
+      config.headers["x-lang"] = lang;
+    }
+  }
+
   return config;
 });
 

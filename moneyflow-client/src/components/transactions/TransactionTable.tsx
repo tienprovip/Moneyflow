@@ -60,16 +60,39 @@ const TransactionTable = memo(function TransactionTable({
         </TableHeader>
         <TableBody>
           {transactions.map((transaction) => {
+            const isTransfer = transaction.type === "transfer";
             const normalizedCategory = transaction.category.trim().toLowerCase();
             const walletName = transaction.walletId
-              ? walletNames[transaction.walletId] || FALLBACK_NAME
-              : FALLBACK_NAME;
+              ? walletNames[transaction.walletId] ||
+                transaction.fromWalletName ||
+                FALLBACK_NAME
+              : transaction.fromWalletName || FALLBACK_NAME;
+            const transferDescription = `${t("tx.transferFrom")} ${transaction.fromWalletName || FALLBACK_NAME} ${t("tx.transferTo")} ${transaction.toWalletName || FALLBACK_NAME}`;
+            const displayName = isTransfer
+              ? t("tx.transferTitle")
+              : transaction.name;
+            const displayDescription = isTransfer
+              ? transferDescription
+              : transaction.description;
+            const displayCategory = isTransfer
+              ? t("tx.transferTitle")
+              : categoryLabels[normalizedCategory] || transaction.category;
+            const amountClassName = isTransfer
+              ? "text-foreground"
+              : transaction.type === "income"
+                ? "text-positive"
+                : "text-negative";
+            const amountPrefix = isTransfer
+              ? ""
+              : transaction.type === "income"
+                ? "+"
+                : "-";
 
             return (
               <TableRow
                 key={transaction.id}
-                className="cursor-pointer hover:bg-muted/50"
-                onClick={() => onEdit(transaction)}
+                className={isTransfer ? "hover:bg-muted/50" : "cursor-pointer hover:bg-muted/50"}
+                onClick={isTransfer ? undefined : () => onEdit(transaction)}
               >
                 <TableCell>
                   <div className="flex items-center gap-3">
@@ -80,17 +103,17 @@ const TransactionTable = memo(function TransactionTable({
                     />
                     <div>
                       <p className="font-medium text-foreground">
-                        {transaction.name}
+                        {displayName}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {transaction.description}
+                        {displayDescription}
                       </p>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary" className="font-normal">
-                    {categoryLabels[normalizedCategory] || transaction.category}
+                    {displayCategory}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
@@ -101,37 +124,39 @@ const TransactionTable = memo(function TransactionTable({
                 </TableCell>
                 <TableCell>
                   <span
-                    className={`font-semibold text-money ${transaction.type === "income" ? "text-positive" : "text-negative"}`}
+                    className={`font-semibold text-money ${amountClassName}`}
                   >
-                    {transaction.type === "income" ? "+" : "-"}
+                    {amountPrefix}
                     {formatVND(transaction.amount)}
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 cursor-pointer"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onEdit(transaction);
-                      }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 cursor-pointer text-destructive hover:text-destructive"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onDelete(transaction.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  {!isTransfer && (
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 cursor-pointer"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onEdit(transaction);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 cursor-pointer text-destructive hover:text-destructive"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onDelete(transaction.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             );

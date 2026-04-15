@@ -8,6 +8,7 @@ const translations = {
   "nav.gold": { vi: "Vàng", en: "Gold" },
   "nav.savings": { vi: "Tiết kiệm", en: "Savings" },
   "nav.settings": { vi: "Cài đặt", en: "Settings" },
+  "nav.more": { vi: "Thêm", en: "More" },
   "nav.darkMode": { vi: "Chế độ tối", en: "Dark Mode" },
   "nav.lightMode": { vi: "Chế độ sáng", en: "Light Mode" },
   "nav.darkShort": { vi: "Tối", en: "Dark" },
@@ -140,6 +141,9 @@ const translations = {
     en: "Track and manage your income and expenses",
   },
   "tx.add": { vi: "Thêm giao dịch", en: "Add Transaction" },
+  "tx.transferTitle": { vi: "Chuyển tiền", en: "Transfer" },
+  "tx.transferFrom": { vi: "Chuyển từ ví", en: "Transfer from wallet" },
+  "tx.transferTo": { vi: "sang ví", en: "to wallet" },
 
   // Summary Cards
   "summary.balance": { vi: "Tổng số dư", en: "Total Balance" },
@@ -156,6 +160,7 @@ const translations = {
   "filter.allTypes": { vi: "Tất cả", en: "All Types" },
   "filter.income": { vi: "Thu nhập", en: "Income" },
   "filter.expense": { vi: "Chi tiêu", en: "Expense" },
+  "filter.transfer": { vi: "Chuyển tiền", en: "Transfer" },
   "filter.type": { vi: "Loại", en: "Type" },
   "filter.dateRange": { vi: "Chọn ngày", en: "Date range" },
   "filter.sort": { vi: "Sắp xếp", en: "Sort" },
@@ -266,6 +271,7 @@ const translations = {
   "confirm.delete": { vi: "Xóa", en: "Delete" },
 
   // Toast
+  "toast.errorTitle": { vi: "Lỗi", en: "Error" },
   "toast.added": { vi: "Đã thêm giao dịch", en: "Transaction added" },
   "toast.updated": { vi: "Đã cập nhật giao dịch", en: "Transaction updated" },
   "toast.addedDesc": {
@@ -478,6 +484,61 @@ const translations = {
   "savings.deletedDesc": {
     vi: "Tài khoản tiết kiệm đã được xóa.",
     en: "Savings account has been deleted.",
+  },
+  "savings.activeListTitle": { vi: "Danh sách sổ tiết kiệm", en: "Active savings accounts" },
+  "savings.settledListTitle": { vi: "Sổ đã tất toán", en: "Settled savings accounts" },
+  "savings.linkedSourceBadge": { vi: "Có liên kết tài khoản nguồn", en: "Linked source wallet" },
+  "savings.receiveDate": { vi: "Ngày nhận", en: "Receive date" },
+  "savings.settleAction": { vi: "Tất toán sổ", en: "Settle saving" },
+  "savings.editAction": { vi: "Sửa thông tin", en: "Edit saving" },
+  "savings.deleteAction": { vi: "Xóa sổ", en: "Delete saving" },
+  "savings.selectPlaceholder": { vi: "Chọn...", en: "Select..." },
+  "savings.noLinkOption": { vi: "-- Không liên kết --", en: "-- No link --" },
+  "savings.sourceLockedHint": {
+    vi: "Không thể đổi nguồn sau khi tạo",
+    en: "Source wallet cannot be changed after creation",
+  },
+  "savings.startDateRequired": { vi: "Vui lòng chọn ngày bắt đầu", en: "Please select start date" },
+  "savings.insufficientSourceBalance": {
+    vi: "Số dư tài khoản liên kết không đủ",
+    en: "Insufficient balance in linked wallet",
+  },
+  "savings.saveFailedDesc": {
+    vi: "Không thể lưu sổ tiết kiệm",
+    en: "Failed to save saving account",
+  },
+  "savings.deleteFailedDesc": {
+    vi: "Không thể xóa sổ tiết kiệm",
+    en: "Failed to delete saving account",
+  },
+  "savings.settleDialogTitle": { vi: "Xác nhận tất toán", en: "Confirm settlement" },
+  "savings.settleDialogDescLinked": {
+    vi: "Sổ tiết kiệm sẽ được tất toán và tiền được cộng về tài khoản liên kết.",
+    en: "This saving will be settled and funds will return to the linked wallet.",
+  },
+  "savings.settleDialogDescNoLink": {
+    vi: "Sổ tiết kiệm chưa có tài khoản liên kết. Vui lòng chọn tài khoản nhận tiền.",
+    en: "This saving has no linked wallet. Please choose a destination wallet.",
+  },
+  "savings.settleTargetLabel": { vi: "Tài khoản nhận tiền", en: "Destination wallet" },
+  "savings.settleTargetPlaceholder": { vi: "Chọn tài khoản", en: "Select wallet" },
+  "savings.settleTargetRequired": {
+    vi: "Vui lòng chọn tài khoản nhận tiền",
+    en: "Please select a destination wallet",
+  },
+  "savings.noSettlementWallet": {
+    vi: "Không có ví khả dụng để nhận tiền tất toán.",
+    en: "No wallet available for settlement funds.",
+  },
+  "savings.settleConfirmBtn": { vi: "Tất toán", en: "Settle" },
+  "savings.settled": { vi: "Đã tất toán", en: "Settled" },
+  "savings.settledDesc": {
+    vi: "Sổ tiết kiệm đã được tất toán thành công.",
+    en: "Saving account settled successfully.",
+  },
+  "savings.settleFailedDesc": {
+    vi: "Không thể tất toán sổ tiết kiệm",
+    en: "Failed to settle saving account",
   },
 
   // Profile Page

@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useLanguage } from "@/hooks/use-language";
 import { fmtVND } from "@/lib/format";
 import { Transaction } from "@/types/transaction";
 import { Wallet, WALLET_TYPE_LABELS } from "@/types/wallet";
@@ -39,6 +40,8 @@ const WalletDetailPanel = React.memo(function WalletDetailPanel({
   selectedTxs,
   wallet,
 }: WalletDetailPanelProps) {
+  const { t } = useLanguage();
+
   if (!wallet) {
     return (
       <Card className="flex items-center justify-center min-h-75">
@@ -116,30 +119,45 @@ const WalletDetailPanel = React.memo(function WalletDetailPanel({
           </p>
         ) : (
           <div className="space-y-2">
-            {selectedTxs.map((tx) => (
-              <div
-                key={tx.id}
-                className="flex items-center gap-3 py-2 border-b border-border last:border-0"
-              >
-                <CategoryIcon
-                  category={tx.category}
-                  iconName={tx.categoryIcon}
-                  colorClassName={tx.categoryColor}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {tx.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{tx.date}</p>
-                </div>
-                <p
-                  className={`text-sm font-bold text-money ${tx.type === "income" ? "text-positive" : "text-negative"}`}
+            {selectedTxs.map((tx) => {
+              const isTransfer = tx.type === "transfer";
+              const transferDescription = `${t("tx.transferFrom")} ${tx.fromWalletName || "-"} ${t("tx.transferTo")} ${tx.toWalletName || "-"}`;
+              const displayName = isTransfer ? t("tx.transferTitle") : tx.name;
+              const displayDesc = isTransfer ? transferDescription : tx.date;
+              const amountClassName = isTransfer
+                ? "text-foreground"
+                : tx.type === "income"
+                  ? "text-positive"
+                  : "text-negative";
+              const amountPrefix = isTransfer
+                ? ""
+                : tx.type === "income"
+                  ? "+"
+                  : "-";
+
+              return (
+                <div
+                  key={tx.id}
+                  className="flex items-center gap-3 py-2 border-b border-border last:border-0"
                 >
-                  {tx.type === "income" ? "+" : "-"}
-                  {fmtVND(tx.amount)}
-                </p>
-              </div>
-            ))}
+                  <CategoryIcon
+                    category={tx.category}
+                    iconName={tx.categoryIcon}
+                    colorClassName={tx.categoryColor}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {displayName}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{displayDesc}</p>
+                  </div>
+                  <p className={`text-sm font-bold text-money ${amountClassName}`}>
+                    {amountPrefix}
+                    {fmtVND(tx.amount)}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         )}
       </CardContent>

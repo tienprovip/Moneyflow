@@ -7,6 +7,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useLanguage } from "@/hooks/use-language";
+import {
+  shouldCountAsExpense,
+  shouldCountAsIncome,
+} from "@/lib/transaction-report";
 import { Transaction } from "@/types/transaction";
 import { TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { memo, useMemo } from "react";
@@ -56,9 +60,11 @@ function buildDailyData(transactions: Transaction[]) {
 
   transactions.forEach((transaction) => {
     const day = transaction.date.slice(5);
-    if (transaction.type === "income") {
+    if (shouldCountAsIncome(transaction)) {
       incomeMap[day] = (incomeMap[day] || 0) + transaction.amount;
-    } else {
+    }
+
+    if (shouldCountAsExpense(transaction)) {
       expenseMap[day] = (expenseMap[day] || 0) + transaction.amount;
     }
   });
@@ -198,9 +204,11 @@ const SummaryCards = memo(function SummaryCards({
       const monthKey = transaction.date.slice(0, 7);
       const currentTotals = totals.get(monthKey) ?? { ...EMPTY_TOTALS };
 
-      if (transaction.type === "income") {
+      if (shouldCountAsIncome(transaction)) {
         currentTotals.income += transaction.amount;
-      } else {
+      }
+
+      if (shouldCountAsExpense(transaction)) {
         currentTotals.expense += transaction.amount;
       }
 

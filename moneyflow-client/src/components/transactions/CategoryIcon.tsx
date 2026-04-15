@@ -1,4 +1,5 @@
 import {
+  ArrowRightLeft,
   Banknote,
   BookOpen,
   Car,
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { memo } from "react";
 
 const ICON_MAP: Record<string, LucideIcon> = {
+  ArrowRightLeft,
   Banknote,
   Laptop,
   TrendingUp,

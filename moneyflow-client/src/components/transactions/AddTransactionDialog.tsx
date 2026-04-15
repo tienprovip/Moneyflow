@@ -80,6 +80,8 @@ const AddTransactionDialog = memo(function AddTransactionDialog({
     if (!open) return;
 
     if (editingTransaction) {
+      const editingType =
+        editingTransaction.type === "income" ? "income" : "expense";
       const matchedCategory = categories.find((option) =>
         matchesCategoryOption(option, editingTransaction.category),
       );
@@ -89,7 +91,7 @@ const AddTransactionDialog = memo(function AddTransactionDialog({
 
       setName(editingTransaction.name);
       setAmount(formatFormattedNumberValue(editingTransaction.amount));
-      setType(editingTransaction.type);
+      setType(editingType);
       setCategory(matchedCategory?.value || "");
       setDate(new Date(editingTransaction.date));
       setNotes(
