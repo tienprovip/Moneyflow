@@ -78,20 +78,31 @@ export const createTransactionService = async (userId: string, data: any) => {
     if (!account) throw new Error("ACCOUNT_NOT_FOUND");
 
     if (
-      data.type === TransactionType.EXPENSE &&
+      (data.type === TransactionType.EXPENSE || data.type === TransactionType.TRANSFER) &&
       account.balance < data.amount
     ) {
       throw new Error("INSUFFICIENT_BALANCE");
     }
 
-    // update balance
-    if (data.type === TransactionType.EXPENSE) {
-      account.balance -= data.amount;
-    } else {
-      account.balance += data.amount;
-    }
+    if (data.type === TransactionType.TRANSFER) {
+      if (!data.toAccountId || data.accountId === data.toAccountId) {
+        throw new Error("INVALID_TRANSFER_DESTINATION");
+      }
+      const toAccount = await AccountModel.findOne({ _id: data.toAccountId, userId }).session(session);
+      if (!toAccount) throw new Error("DESTINATION_ACCOUNT_NOT_FOUND");
 
-    await account.save({ session });
+      account.balance -= data.amount;
+      toAccount.balance += data.amount;
+      await account.save({ session });
+      await toAccount.save({ session });
+    } else {
+      if (data.type === TransactionType.EXPENSE) {
+        account.balance -= data.amount;
+      } else {
+        account.balance += data.amount;
+      }
+      await account.save({ session });
+    }
 
     const [transaction] = await TransactionModel.create(
       [
@@ -157,6 +168,15 @@ export const updateTransactionService = async (
     // rollback old balance
     if (transaction.type === TransactionType.EXPENSE) {
       currentAccount.balance += transaction.amount;
+    } else if (transaction.type === TransactionType.TRANSFER) {
+      currentAccount.balance += transaction.amount;
+      if (transaction.toAccountId) {
+        const oldTarget = await AccountModel.findOne({ _id: transaction.toAccountId, userId }).session(session);
+        if (oldTarget) {
+          oldTarget.balance -= transaction.amount;
+          await oldTarget.save({ session });
+        }
+      }
     } else {
       currentAccount.balance -= transaction.amount;
     }
@@ -167,6 +187,15 @@ export const updateTransactionService = async (
         throw new Error("INSUFFICIENT_BALANCE");
       }
       targetAccount.balance -= nextAmount;
+    } else if (nextType === TransactionType.TRANSFER) {
+      if (targetAccount.balance < nextAmount) throw new Error("INSUFFICIENT_BALANCE");
+      targetAccount.balance -= nextAmount;
+      const newToId = data.toAccountId ?? transaction.toAccountId;
+      if (!newToId || String(targetAccount._id) === newToId) throw new Error("INVALID_TRANSFER_DESTINATION");
+      const newTarget = await AccountModel.findOne({ _id: newToId, userId }).session(session);
+      if (!newTarget) throw new Error("DESTINATION_ACCOUNT_NOT_FOUND");
+      newTarget.balance += nextAmount;
+      await newTarget.save({ session });
     } else {
       targetAccount.balance += nextAmount;
     }
@@ -221,6 +250,15 @@ export const deleteTransactionService = async (
     // rollback
     if (transaction.type === TransactionType.EXPENSE) {
       account.balance += transaction.amount;
+    } else if (transaction.type === TransactionType.TRANSFER) {
+      account.balance += transaction.amount;
+      if (transaction.toAccountId) {
+        const oldTarget = await AccountModel.findOne({ _id: transaction.toAccountId, userId }).session(session);
+        if (oldTarget) {
+          oldTarget.balance -= transaction.amount;
+          await oldTarget.save({ session });
+        }
+      }
     } else {
       account.balance -= transaction.amount;
     }

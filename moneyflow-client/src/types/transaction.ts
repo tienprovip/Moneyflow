@@ -26,11 +26,12 @@ export interface TransactionFormValues {
   name: string;
   description: string;
   amount: number;
-  type: Extract<TransactionType, "income" | "expense">;
+  type: TransactionType;
   category: string;
   date: string;
   notes?: string;
   walletId?: string;
+  toWalletId?: string;
 }
 
 export interface TransactionFilters {

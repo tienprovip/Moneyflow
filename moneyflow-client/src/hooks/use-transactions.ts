@@ -23,8 +23,9 @@ type TransactionPayload = {
   date: string;
   note: string;
   title: string;
-  type: "income" | "expense";
+  type: "income" | "expense" | "transfer";
   categoryId?: string;
+  toAccountId?: string;
 };
 
 const fetchTransactions = async () => {

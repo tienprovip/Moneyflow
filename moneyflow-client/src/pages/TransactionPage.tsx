@@ -290,6 +290,7 @@ const Transactions = () => {
         note: data.notes?.trim() || data.description.trim() || data.name.trim(),
         title: data.name.trim(),
         type: data.type,
+        ...(data.toWalletId ? { toAccountId: data.toWalletId } : {}),
       };
       const categoryId = categoryIdByValue.get(data.category);
 
@@ -381,7 +382,6 @@ const Transactions = () => {
   }, [deleteId, deleteTransaction, toast]);
 
   const openEdit = useCallback((transaction: Transaction) => {
-    if (transaction.type === "transfer") return;
     setEditingTransaction(transaction);
     setDialogOpen(true);
   }, []);

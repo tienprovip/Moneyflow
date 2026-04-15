@@ -60,11 +60,12 @@ const AddTransactionDialog = memo(function AddTransactionDialog({
   const { t } = useLanguage();
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
-  const [type, setType] = useState<"income" | "expense">("expense");
+  const [type, setType] = useState<"income" | "expense" | "transfer">("expense");
   const [category, setCategory] = useState("");
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [notes, setNotes] = useState("");
   const [walletId, setWalletId] = useState("");
+  const [toWalletId, setToWalletId] = useState("");
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -81,7 +82,7 @@ const AddTransactionDialog = memo(function AddTransactionDialog({
 
     if (editingTransaction) {
       const editingType =
-        editingTransaction.type === "income" ? "income" : "expense";
+        editingTransaction.type === "income" ? "income" : (editingTransaction.type === "transfer" ? "transfer" : "expense");
       const matchedCategory = categories.find((option) =>
         matchesCategoryOption(option, editingTransaction.category),
       );
@@ -98,6 +99,7 @@ const AddTransactionDialog = memo(function AddTransactionDialog({
         editingTransaction.notes || editingTransaction.description || "",
       );
       setWalletId(matchedWallet?.id || "");
+      setToWalletId(editingTransaction.toWalletId || "");
     } else {
       setName("");
       setAmount("");
@@ -106,6 +108,7 @@ const AddTransactionDialog = memo(function AddTransactionDialog({
       setDate(new Date());
       setNotes("");
       setWalletId(wallets[0]?.id || "");
+      setToWalletId("");
     }
     setErrors({});
   }, [categories, editingTransaction, open, wallets]);
@@ -115,12 +118,14 @@ const AddTransactionDialog = memo(function AddTransactionDialog({
     const num = parseFormattedNumber(amount);
     if (!amount || num === null || num <= 0)
       nextErrors.amount = t("validation.amountPositive");
-    if (!category) nextErrors.category = t("validation.categoryRequired");
+    if (type !== "transfer" && !category) nextErrors.category = t("validation.categoryRequired");
     if (!walletId) nextErrors.walletId = t("dialog.walletPlaceholder");
-    if (!name.trim()) nextErrors.name = t("validation.nameRequired");
+    if (type === "transfer" && !toWalletId) nextErrors.toWalletId = t("dialog.walletPlaceholder");
+    if (type === "transfer" && walletId === toWalletId) nextErrors.toWalletId = t("validation.categoryRequired");
+    if (type !== "transfer" && !name.trim()) nextErrors.name = t("validation.nameRequired");
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
-  }, [amount, category, name, t, walletId]);
+  }, [amount, category, name, t, walletId, toWalletId, type]);
 
   const handleSave = useCallback(async () => {
     if (!validate()) return;
@@ -129,19 +134,22 @@ const AddTransactionDialog = memo(function AddTransactionDialog({
     if (parsedAmount === null || parsedAmount <= 0) return;
 
     setSaving(true);
+    
+    const finalName = type === "transfer" && !name.trim() ? t("filter.transfer") : name.trim();
 
     try {
       await onSave({
-        name: name.trim(),
-        description: notes.trim() || name.trim(),
+        name: finalName,
+        description: notes.trim() || finalName,
         amount: parsedAmount,
         type,
-        category,
+        category: type === "transfer" ? "" : category,
         date: date
           ? format(date, "yyyy-MM-dd")
           : format(new Date(), "yyyy-MM-dd"),
         notes,
         walletId,
+        toWalletId: type === "transfer" ? toWalletId : undefined,
       });
 
       onOpenChange(false);
@@ -166,6 +174,7 @@ const AddTransactionDialog = memo(function AddTransactionDialog({
     type,
     validate,
     walletId,
+    toWalletId,
     category,
   ]);
 
@@ -219,7 +228,7 @@ const AddTransactionDialog = memo(function AddTransactionDialog({
               <Select
                 value={type}
                 onValueChange={(v) => {
-                  const nextType = v as "income" | "expense";
+                  const nextType = v as "income" | "expense" | "transfer";
                   const nextCategories = categories.filter(
                     (category) => category.type === nextType,
                   );
@@ -230,7 +239,7 @@ const AddTransactionDialog = memo(function AddTransactionDialog({
                     );
 
                   setType(nextType);
-                  if (!currentCategoryStillVisible) {
+                  if (!currentCategoryStillVisible && nextType !== "transfer") {
                     setCategory("");
                   }
                 }}
@@ -241,33 +250,55 @@ const AddTransactionDialog = memo(function AddTransactionDialog({
                 <SelectContent>
                   <SelectItem value="income">{t("filter.income")}</SelectItem>
                   <SelectItem value="expense">{t("filter.expense")}</SelectItem>
+                  <SelectItem value="transfer">{t("filter.transfer")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          {/* Category + Date */}
+          {/* Category/ToWallet + Date */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>{t("dialog.category")}</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={t("dialog.categoryPlaceholder")}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {visibleCategories.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.category && (
-                <p className="text-xs text-destructive">{errors.category}</p>
-              )}
-            </div>
+            {type !== "transfer" ? (
+              <div className="space-y-1.5">
+                <Label>{t("dialog.category")}</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={t("dialog.categoryPlaceholder")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {visibleCategories.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.category && (
+                  <p className="text-xs text-destructive">{errors.category}</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label>{t("tx.transferTo")}</Label>
+                <Select value={toWalletId} onValueChange={setToWalletId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("dialog.walletPlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {wallets.map((w) => (
+                      <SelectItem key={w.id} value={w.id} disabled={w.id === walletId}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.toWalletId && (
+                  <p className="text-xs text-destructive">{errors.toWalletId}</p>
+                )}
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>{t("dialog.date")}</Label>
               <Popover>
@@ -299,7 +330,7 @@ const AddTransactionDialog = memo(function AddTransactionDialog({
 
           {/* Wallet */}
           <div className="space-y-1.5">
-            <Label>{t("dialog.wallet")}</Label>
+            <Label>{type === "transfer" ? t("tx.transferFrom") : t("dialog.wallet")}</Label>
             <Select value={walletId} onValueChange={setWalletId}>
               <SelectTrigger>
                 <SelectValue placeholder={t("dialog.walletPlaceholder")} />
