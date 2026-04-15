@@ -281,12 +281,24 @@ const resolveSettlementAccount = async ({
   }
 
   if (autoSelectDestination) {
+    const fallbackCash = await AccountModel.findOne({
+      userId,
+      type: AccountType.CASH,
+      _id: { $ne: account._id },
+    })
+      .sort({ updatedAt: -1 })
+      .session(session);
+
+    if (fallbackCash) {
+      return fallbackCash;
+    }
+
     const fallback = await AccountModel.findOne({
       userId,
       type: { $ne: AccountType.SAVING },
       _id: { $ne: account._id },
     })
-      .sort({ createdAt: 1 })
+      .sort({ updatedAt: -1 })
       .session(session);
 
     if (fallback) {
