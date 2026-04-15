@@ -540,6 +540,8 @@ const translations = {
     vi: "Không thể tất toán sổ tiết kiệm",
     en: "Failed to settle saving account",
   },
+  "savings.earlySettlement": { vi: "Trước hạn", en: "Early" },
+  "savings.expectedAmount": { vi: "Tiền nhận dự kiến", en: "Expected amount" },
 
   // Profile Page
   "nav.profile": { vi: "Hồ sơ", en: "Profile" },

@@ -28,7 +28,7 @@ const INITIAL_BALANCE_CATEGORY_CONFIG = {
   },
 } as const;
 
-const INITIAL_BALANCE_TITLE = "Opening balance";
+const INITIAL_BALANCE_TITLE = "Số dư ban đầu";
 const SAVING_DEPOSIT_TRANSFER_TITLE = "Saving deposit";
 const SAVING_SETTLEMENT_TRANSFER_TITLE = "Saving settlement";
 const SAVING_INTEREST_TITLE = "Saving interest";

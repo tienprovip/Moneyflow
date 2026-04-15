@@ -348,6 +348,27 @@ const SavingPage = () => {
     () => wallets.find((wallet) => wallet.id === settleId) ?? null,
     [settleId, wallets],
   );
+  const settleCalculation = useMemo(() => {
+    if (!settleWallet) return null;
+    const principal = settleWallet.initialDeposit;
+    const startDate = parseDateValue(settleWallet.startDate);
+    const maturityDate = settleWallet.maturityDate ? new Date(settleWallet.maturityDate) : addMonths(startDate, settleWallet.termMonths);
+    const today = new Date();
+    
+    const isEarly = today.getTime() < maturityDate.getTime();
+    const settlementDate = isEarly ? today : maturityDate;
+    const annualRatePercent = isEarly ? 0.1 : settleWallet.interestRate;
+    
+    const holdingDays = getDayDifference(startDate, settlementDate);
+    const interest = Math.max(0, Math.round(principal * (annualRatePercent / 100) * (holdingDays / 365)));
+    
+    return {
+      isEarly,
+      interestEarned: interest,
+      finalAmount: principal + interest,
+    };
+  }, [settleWallet]);
+
   const hasValidLinkedSource = useMemo(
     () =>
       Boolean(
@@ -889,6 +910,26 @@ const SavingPage = () => {
                 : t("savings.settleDialogDescLinked")}
             </DialogDescription>
           </AlertDialogHeader>
+
+          {settleCalculation && settleWallet && (
+            <div className="bg-primary/5 border border-primary/10 rounded-lg p-4 space-y-2 my-2">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">{t("savings.depositLabel")}</span>
+                <span className="font-medium text-foreground">{formatVND(settleWallet.initialDeposit)}đ</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">
+                  {t("savings.interestLabel")}
+                  {settleCalculation.isEarly && <span className="ml-1 text-orange-500 text-xs">({t("savings.earlySettlement" as any)})</span>}
+                </span>
+                <span className="font-medium text-emerald-500">+{formatVND(settleCalculation.interestEarned)}đ</span>
+              </div>
+              <div className="border-t border-primary/10 pt-2 flex justify-between items-center mt-2">
+                <span className="font-medium text-foreground">{t("savings.expectedAmount" as any)}</span>
+                <span className="font-bold text-lg text-primary">{formatVND(settleCalculation.finalAmount)}đ</span>
+              </div>
+            </div>
+          )}
 
           {requiresSettleTargetAccount && (
             <div className="space-y-2 py-2">
