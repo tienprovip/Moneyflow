@@ -15,6 +15,7 @@ export interface ITransaction extends Document {
 
   isInitialBalance?: boolean;
   isSavingInterest?: boolean;
+  isInvestmentReturn?: boolean;
   title?: string;
   type: TransactionType;
   amount: number;
@@ -52,6 +53,7 @@ const TransactionSchema = new Schema<ITransaction>(
 
     isInitialBalance: { type: Boolean, default: false },
     isSavingInterest: { type: Boolean, default: false },
+    isInvestmentReturn: { type: Boolean, default: false },
 
     title: String,
 

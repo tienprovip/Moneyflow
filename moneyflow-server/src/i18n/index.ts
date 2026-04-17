@@ -38,7 +38,19 @@ type TranslationKey =
   | "transaction.insufficientBalance"
   | "transaction.missingMonth"
   | "transaction.invalidSummaryQuery"
-  | "transaction.invalidSummaryRange";
+  | "transaction.invalidSummaryRange"
+  | "gold.notFound"
+  | "gold.alreadySold"
+  | "gold.deletedSuccess"
+  | "gold.insufficientWeight"
+  | "gold.invalidSellWeight"
+  | "gold.cannotDelete"
+  | "stock.notFound"
+  | "stock.alreadySold"
+  | "stock.deletedSuccess"
+  | "stock.insufficientQuantity"
+  | "stock.invalidSellQuantity"
+  | "stock.cannotDelete";
 
 type Dictionary = Record<TranslationKey, string>;
 
@@ -85,6 +97,18 @@ const dictionaries: Record<Language, Dictionary> = {
       "Use only one summary filter: month, year, or from/to",
     "transaction.invalidSummaryRange":
       "From and to must be provided together, and from must be before or equal to to",
+    "gold.notFound": "Gold record not found",
+    "gold.alreadySold": "Gold has already been sold",
+    "gold.deletedSuccess": "Gold record deleted",
+    "gold.insufficientWeight": "Sell weight exceeds remaining weight",
+    "gold.invalidSellWeight": "Sell weight must be greater than 0",
+    "gold.cannotDelete": "Cannot delete a lot that has been (partially) sold",
+    "stock.notFound": "Stock record not found",
+    "stock.alreadySold": "Stock has already been sold",
+    "stock.deletedSuccess": "Stock record deleted",
+    "stock.insufficientQuantity": "Sell quantity exceeds holding quantity",
+    "stock.invalidSellQuantity": "Sell quantity must be greater than 0",
+    "stock.cannotDelete": "Cannot delete a position that has been (partially) sold",
   },
   vi: {
     "auth.notAuthorized": "Không được phép truy cập",
@@ -128,6 +152,18 @@ const dictionaries: Record<Language, Dictionary> = {
       "Chỉ được dùng một kiểu lọc summary: month, year hoặc from/to",
     "transaction.invalidSummaryRange":
       "Phải truyền đồng thời from và to, và from phải nhỏ hơn hoặc bằng to",
+    "gold.notFound": "Không tìm thấy giao dịch vàng",
+    "gold.alreadySold": "Lô vàng này đã được bán hết",
+    "gold.deletedSuccess": "Xóa thành công",
+    "gold.insufficientWeight": "Số lượng bán vượt quá số lượng còn lại",
+    "gold.invalidSellWeight": "Số lượng bán phải lớn hơn 0",
+    "gold.cannotDelete": "Không thể xóa lô đã bán (một phần hoặc toàn bộ)",
+    "stock.notFound": "Không tìm thấy giao dịch cổ phiếu",
+    "stock.alreadySold": "Cổ phiếu này đã được bán hết",
+    "stock.deletedSuccess": "Xóa thành công",
+    "stock.insufficientQuantity": "Số cp bán vượt quá số cp đang nắm giữ",
+    "stock.invalidSellQuantity": "Số cp bán phải lớn hơn 0",
+    "stock.cannotDelete": "Không thể xóa vị thế đã bán (một phần hoặc toàn bộ)",
   },
 };
 
