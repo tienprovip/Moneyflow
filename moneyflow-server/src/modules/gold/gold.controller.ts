@@ -72,6 +72,9 @@ export const createGold = async (req: AuthRequest, res: Response) => {
     const data = await goldService.createGoldService(userId, parsed.data);
     return res.status(201).json(data);
   } catch (error: any) {
+    if (error.message === "GOLD_POSITION_ALREADY_EXISTS") {
+      return res.status(400).json({ message: t(req, "gold.positionAlreadyExists") });
+    }
     if (error.message === "SOURCE_ACCOUNT_NOT_FOUND") {
       return res.status(404).json({ message: t(req, "account.notFound") });
     }

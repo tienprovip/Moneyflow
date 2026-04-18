@@ -45,6 +45,7 @@ type TranslationKey =
   | "gold.insufficientWeight"
   | "gold.invalidSellWeight"
   | "gold.cannotDelete"
+  | "gold.positionAlreadyExists"
   | "stock.notFound"
   | "stock.alreadySold"
   | "stock.deletedSuccess"
@@ -103,6 +104,7 @@ const dictionaries: Record<Language, Dictionary> = {
     "gold.insufficientWeight": "Sell weight exceeds remaining weight",
     "gold.invalidSellWeight": "Sell weight must be greater than 0",
     "gold.cannotDelete": "Cannot delete a lot that has been (partially) sold",
+    "gold.positionAlreadyExists": "Gold position already exists. Please use buy more.",
     "stock.notFound": "Stock record not found",
     "stock.alreadySold": "Stock has already been sold",
     "stock.deletedSuccess": "Stock record deleted",
@@ -158,6 +160,7 @@ const dictionaries: Record<Language, Dictionary> = {
     "gold.insufficientWeight": "Số lượng bán vượt quá số lượng còn lại",
     "gold.invalidSellWeight": "Số lượng bán phải lớn hơn 0",
     "gold.cannotDelete": "Không thể xóa lô đã bán (một phần hoặc toàn bộ)",
+    "gold.positionAlreadyExists": "Vị thế vàng này đã tồn tại. Vui lòng dùng tính năng Mua thêm.",
     "stock.notFound": "Không tìm thấy giao dịch cổ phiếu",
     "stock.alreadySold": "Cổ phiếu này đã được bán hết",
     "stock.deletedSuccess": "Xóa thành công",

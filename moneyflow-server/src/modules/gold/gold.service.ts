@@ -67,6 +67,17 @@ export const createGoldService = async (userId: string, data: any) => {
   session.startTransaction();
 
   try {
+    const goldType = data.goldType ?? GoldType.GOLD_SJC;
+    const existingPosition = await GoldModel.findOne({
+      userId,
+      goldType,
+      status: GoldStatus.HOLDING,
+    }).session(session);
+
+    if (existingPosition) {
+      throw new Error("GOLD_POSITION_ALREADY_EXISTS");
+    }
+
     const weight = Number(data.weight);
     const buyPrice = Number(data.buyPrice);
     const purchaseAmount = Math.round(weight * buyPrice);
