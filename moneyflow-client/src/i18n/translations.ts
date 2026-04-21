@@ -384,6 +384,60 @@ const translations = {
     vi: "Đã xóa khỏi danh mục.",
     en: "Removed from your holdings.",
   },
+  "gold.sellTitle": { vi: "Bán vàng", en: "Sell Gold" },
+  "gold.sellDesc": {
+    vi: "Nhập thông tin bán vàng.",
+    en: "Enter sell details.",
+  },
+  "gold.sellQty": { vi: "Số lượng bán", en: "Sell Quantity" },
+  "gold.sellPrice": { vi: "Giá bán", en: "Sell Price" },
+  "gold.sellDate": { vi: "Ngày bán", en: "Sell Date" },
+  "gold.sellTotal": { vi: "Tổng tiền bán", en: "Total Sale" },
+  "gold.sellCost": { vi: "Giá vốn", en: "Cost Basis" },
+  "gold.sellPL": { vi: "Lãi/Lỗ ước tính", en: "Estimated P/L" },
+  "gold.sellConfirm": { vi: "Xác nhận bán", en: "Confirm Sell" },
+  "gold.sellQtyExceed": {
+    vi: "Không thể bán nhiều hơn số lượng đang có",
+    en: "Cannot sell more than current quantity",
+  },
+  "gold.sold": { vi: "Đã bán vàng", en: "Gold sold" },
+  "gold.soldDesc": {
+    vi: "Giao dịch bán vàng đã được ghi nhận.",
+    en: "Sell transaction has been recorded.",
+  },
+  "gold.sellBtn": { vi: "Bán", en: "Sell" },
+  "gold.sellWallet": { vi: "Tiền về ví", en: "Receive to Wallet" },
+  "gold.sellWalletPlaceholder": {
+    vi: "Chọn ví nhận tiền",
+    en: "Select wallet",
+  },
+  "gold.sellWalletRequired": {
+    vi: "Vui lòng chọn ví nhận tiền",
+    en: "Please select a wallet",
+  },
+  "gold.byTypeTitle": {
+    vi: "Danh mục vàng theo loại",
+    en: "Gold Holdings by Type",
+  },
+  "gold.byTypeSubtitle": {
+    vi: "Tổng hợp số lượng và giá bình quân theo từng loại",
+    en: "Aggregated quantity and average price per type",
+  },
+  "gold.avgPrice": { vi: "Giá bình quân", en: "Avg Price" },
+  "gold.viewDetail": { vi: "Xem chi tiết", en: "View detail" },
+  "gold.detailTitle": { vi: "Chi tiết loại vàng", en: "Gold Type Details" },
+  "gold.detailDesc": {
+    vi: "Lịch sử các lần mua và bán cho loại vàng này.",
+    en: "Buy and sell history for this gold type.",
+  },
+  "gold.tabBuys": { vi: "Lịch sử mua", en: "Buy History" },
+  "gold.tabSells": { vi: "Lịch sử bán", en: "Sell History" },
+  "gold.noBuys": { vi: "Chưa có lần mua nào.", en: "No purchases yet." },
+  "gold.noSells": { vi: "Chưa có lần bán nào.", en: "No sales yet." },
+  "gold.realizedPL": { vi: "Lãi/Lỗ thực hiện", en: "Realized P/L" },
+  "gold.avgAtSell": { vi: "Giá BQ lúc bán", en: "Avg at sell time" },
+  "gold.totalCount": { vi: "loại", en: "types" },
+  "gold.holdingQty": { vi: "Số lượng đang giữ", en: "Holding Qty" },
 
   // Top Spending
   "spending.title": {
@@ -466,9 +520,15 @@ const translations = {
     vi: "VD: Vietcombank, TPBank...",
     en: "e.g. Vietcombank, TPBank...",
   },
-  "savings.linkedWalletLabel": { vi: "Tài khoản liên kết", en: "Linked Wallet" },
+  "savings.linkedWalletLabel": {
+    vi: "Tài khoản liên kết",
+    en: "Linked Wallet",
+  },
   "savings.depositDateLabel": { vi: "Ngày gửi", en: "Deposit Date" },
-  "savings.depositDatePlaceholder": { vi: "Chọn ngày gửi", en: "Select deposit date" },
+  "savings.depositDatePlaceholder": {
+    vi: "Chọn ngày gửi",
+    en: "Select deposit date",
+  },
   "savings.saveBtn": { vi: "Lưu", en: "Save" },
   "savings.added": { vi: "Đã tạo tài khoản", en: "Account created" },
   "savings.addedDesc": {
@@ -485,9 +545,18 @@ const translations = {
     vi: "Tài khoản tiết kiệm đã được xóa.",
     en: "Savings account has been deleted.",
   },
-  "savings.activeListTitle": { vi: "Danh sách sổ tiết kiệm", en: "Active savings accounts" },
-  "savings.settledListTitle": { vi: "Sổ đã tất toán", en: "Settled savings accounts" },
-  "savings.linkedSourceBadge": { vi: "Có liên kết tài khoản nguồn", en: "Linked source wallet" },
+  "savings.activeListTitle": {
+    vi: "Danh sách sổ tiết kiệm",
+    en: "Active savings accounts",
+  },
+  "savings.settledListTitle": {
+    vi: "Sổ đã tất toán",
+    en: "Settled savings accounts",
+  },
+  "savings.linkedSourceBadge": {
+    vi: "Có liên kết tài khoản nguồn",
+    en: "Linked source wallet",
+  },
   "savings.receiveDate": { vi: "Ngày nhận", en: "Receive date" },
   "savings.settleAction": { vi: "Tất toán sổ", en: "Settle saving" },
   "savings.editAction": { vi: "Sửa thông tin", en: "Edit saving" },
@@ -498,7 +567,10 @@ const translations = {
     vi: "Không thể đổi nguồn sau khi tạo",
     en: "Source wallet cannot be changed after creation",
   },
-  "savings.startDateRequired": { vi: "Vui lòng chọn ngày bắt đầu", en: "Please select start date" },
+  "savings.startDateRequired": {
+    vi: "Vui lòng chọn ngày bắt đầu",
+    en: "Please select start date",
+  },
   "savings.insufficientSourceBalance": {
     vi: "Số dư tài khoản liên kết không đủ",
     en: "Insufficient balance in linked wallet",
@@ -511,7 +583,10 @@ const translations = {
     vi: "Không thể xóa sổ tiết kiệm",
     en: "Failed to delete saving account",
   },
-  "savings.settleDialogTitle": { vi: "Xác nhận tất toán", en: "Confirm settlement" },
+  "savings.settleDialogTitle": {
+    vi: "Xác nhận tất toán",
+    en: "Confirm settlement",
+  },
   "savings.settleDialogDescLinked": {
     vi: "Sổ tiết kiệm sẽ được tất toán và tiền được cộng về tài khoản liên kết.",
     en: "This saving will be settled and funds will return to the linked wallet.",
@@ -520,8 +595,14 @@ const translations = {
     vi: "Sổ tiết kiệm chưa có tài khoản liên kết. Vui lòng chọn tài khoản nhận tiền.",
     en: "This saving has no linked wallet. Please choose a destination wallet.",
   },
-  "savings.settleTargetLabel": { vi: "Tài khoản nhận tiền", en: "Destination wallet" },
-  "savings.settleTargetPlaceholder": { vi: "Chọn tài khoản", en: "Select wallet" },
+  "savings.settleTargetLabel": {
+    vi: "Tài khoản nhận tiền",
+    en: "Destination wallet",
+  },
+  "savings.settleTargetPlaceholder": {
+    vi: "Chọn tài khoản",
+    en: "Select wallet",
+  },
   "savings.settleTargetRequired": {
     vi: "Vui lòng chọn tài khoản nhận tiền",
     en: "Please select a destination wallet",
