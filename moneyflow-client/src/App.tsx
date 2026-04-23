@@ -14,6 +14,7 @@ const Wallets = lazy(() => import("./pages/WalletPage"));
 const Transactions = lazy(() => import("./pages/TransactionPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Savings = lazy(() => import("./pages/SavingPage"));
+const Gold = lazy(() => import("./pages/GoldPage"));
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/wallets" element={<Wallets />} />
                   <Route path="/savings" element={<Savings />} />
+                  <Route path="/gold" element={<Gold />} />
                   <Route path="/transactions" element={<Transactions />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
