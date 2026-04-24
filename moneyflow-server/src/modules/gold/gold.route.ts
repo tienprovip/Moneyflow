@@ -7,6 +7,7 @@ const router = Router();
 router.use(protect);
 
 router.get("/", controller.getGolds);
+router.get("/market-prices", controller.getMarketPrices);
 router.get("/:id", controller.getGoldById);
 router.post("/", controller.createGold);
 router.post("/buy/:id", controller.buyMoreGold);    // Mua thêm vào vị thế (cập nhật giá bình quân)

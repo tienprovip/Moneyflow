@@ -45,6 +45,19 @@ export const getGolds = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// ─── GET MARKET PRICES ───────────────────────────────────────────────────────
+import { goldScraperService } from "./gold-scraper.service";
+
+export const getMarketPrices = async (req: AuthRequest, res: Response) => {
+  try {
+    const prices = await goldScraperService.getMarketPrices();
+    return res.json(prices);
+  } catch (error) {
+    console.error("GET MARKET PRICES ERROR:", error);
+    return res.status(500).json({ message: t(req, "common.serverError") });
+  }
+};
+
 // ─── GET BY ID ───────────────────────────────────────────────────────────────
 export const getGoldById = async (req: AuthRequest, res: Response) => {
   try {

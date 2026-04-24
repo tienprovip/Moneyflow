@@ -2,11 +2,12 @@ import mongoose, { Schema, Document } from "mongoose";
 import { CurrencyCode } from "../../shared/currency";
 
 export enum GoldType {
-  GOLD_999_9 = "gold_999_9",         // Vàng 999.9
-  GOLD_99_9 = "gold_99_9",           // Vàng 99.9
-  GOLD_SJC = "gold_sjc",             // Vàng SJC
-  RAW_GOLD_999_9 = "raw_gold_999_9", // Vàng nguyên liệu 999.9
-  RAW_GOLD_99_9 = "raw_gold_99_9",   // Vàng nguyên liệu 99.9
+  SJC9999 = "SJC9999",       // Vàng miếng SJC
+  KGB = "KGB",               // Nhẫn Tròn ép vỉ Kim Gia Bảo 24K (999.9)
+  GOLD_9999 = "9999",        // Vàng trang sức 24K (999.9)
+  GOLD_999 = "999",          // Vàng trang sức 24K (99.9)
+  NL9999 = "NL9999",         // Vàng nguyên liệu 999.9
+  NL999 = "NL999",           // Vàng nguyên liệu 99.9
 }
 
 export enum GoldStatus {

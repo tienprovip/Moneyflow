@@ -67,7 +67,7 @@ export const createGoldService = async (userId: string, data: any) => {
   session.startTransaction();
 
   try {
-    const goldType = data.goldType ?? GoldType.GOLD_SJC;
+    const goldType = data.goldType ?? GoldType.SJC9999;
     const existingPosition = await GoldModel.findOne({
       userId,
       goldType,
@@ -128,7 +128,7 @@ export const createGoldService = async (userId: string, data: any) => {
       [
         {
           userId,
-          goldType: data.goldType ?? GoldType.GOLD_SJC,
+          goldType: data.goldType ?? GoldType.SJC9999,
           currencyCode,
           totalWeight: weight,
           avgBuyPrice,
