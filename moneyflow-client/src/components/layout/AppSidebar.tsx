@@ -15,10 +15,12 @@ import {
 import { NavLink } from "@/components/NavLink";
 import { useTheme } from "@/hooks/use-theme";
 import { useLanguage } from "@/hooks/use-language";
+import { useAuth } from "@/context/AuthContext";
 
 export function AppSidebar() {
   const { theme, toggleTheme } = useTheme();
   const { t, toggleLocale } = useLanguage();
+  const { logout } = useAuth();
 
   const menuItems = [
     { title: t("nav.overview"), url: "/", icon: LayoutDashboard },
@@ -101,7 +103,15 @@ export function AppSidebar() {
               tien@email.com
             </p>
           </div>
-          <button className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              logout();
+            }}
+            className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+            title={t("nav.logout")}
+          >
             <LogOut className="w-4 h-4" />
           </button>
         </NavLink>

@@ -12,6 +12,7 @@ import {
   CircleDollarSign,
   Languages,
   LayoutDashboard,
+  LogOut,
   Moon,
   MoreHorizontal,
   Settings,
@@ -23,10 +24,12 @@ import {
 } from "lucide-react";
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 const MobileNav = () => {
   const { theme, toggleTheme } = useTheme();
   const { t, toggleLocale } = useLanguage();
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -126,6 +129,17 @@ const MobileNav = () => {
               <span>
                 {theme === "dark" ? t("nav.lightMode") : t("nav.darkMode")}
               </span>
+            </button>
+            <div className="border-t border-border my-2"></div>
+            <button
+              onClick={() => {
+                setMoreOpen(false);
+                logout();
+              }}
+              className="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+              <span>{t("nav.logout")}</span>
             </button>
           </div>
         </SheetContent>
