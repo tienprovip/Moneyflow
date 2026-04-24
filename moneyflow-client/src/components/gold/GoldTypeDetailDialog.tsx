@@ -21,8 +21,8 @@ import { format } from "date-fns";
 import { fmtVND } from "@/lib/format";
 import { useLanguage } from "@/hooks/use-language";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { GoldHolding } from "./GoldDialog";
-import type { GoldSale, GoldType } from "@/types/gold";
+import type { GoldHolding, GoldSale, GoldType } from "@/types/gold";
+import { GOLD_TYPE_LABELS } from "@/types/gold";
 
 interface Props {
   open: boolean;
@@ -64,7 +64,7 @@ export function GoldTypeDetailDialog({
               variant="secondary"
               className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0"
             >
-              {type}
+              {GOLD_TYPE_LABELS[type] ?? type}
             </Badge>
             <DialogTitle className="text-base sm:text-lg">
               {t("gold.detailTitle")}

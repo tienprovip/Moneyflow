@@ -2,6 +2,7 @@ const walletTransactionsKey = ["wallet-transactions"] as const;
 
 export const queryKeys = {
   categories: ["categories"] as const,
+  gold: ["gold"] as const,
   transactions: ["transactions"] as const,
   walletTransactions: walletTransactionsKey,
   walletTransactionsById: (walletId: string) =>

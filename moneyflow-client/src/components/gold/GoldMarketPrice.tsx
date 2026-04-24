@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/hooks/use-language";
+import { GOLD_TYPE_LABELS, GoldType } from "@/types/gold";
 
 interface Props {
   prices: Record<string, { buy: number; sell: number }>;
@@ -20,17 +21,12 @@ export const GoldMarketPrices = ({ prices }: Props) => {
           {Object.entries(prices).map(([type, p]) => (
             <div
               key={type}
-              className="flex items-center justify-between p-3 rounded-lg bg-secondary/50"
+              className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 gap-3"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">
-                    {type.slice(0, 2)}
-                  </span>
-                </div>
-                <p className="text-sm font-medium text-foreground">{type}</p>
+              <div className="flex items-center gap-3 flex-1">
+                <p className="text-sm font-medium text-foreground">{GOLD_TYPE_LABELS[type as GoldType] ?? type}</p>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <p className="text-xs text-muted-foreground">
                   {t("gold.buy")}:{" "}
                   <span className="font-medium text-foreground">

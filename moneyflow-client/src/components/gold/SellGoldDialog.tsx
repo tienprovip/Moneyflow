@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,8 @@ import { format } from "date-fns";
 import { useLanguage } from "@/hooks/use-language";
 import { Badge } from "@/components/ui/badge";
 import { fmtVND } from "@/lib/format";
-import type { GoldHolding } from "./GoldDialog";
+import type { GoldHolding } from "@/types/gold";
+import { GOLD_TYPE_LABELS } from "@/types/gold";
 
 interface Props {
   open: boolean;
@@ -62,14 +63,17 @@ export function SellGoldDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen && holding) {
+  useEffect(() => {
+    if (open && holding) {
       setSellQty(String(holding.quantity));
       setSellPrice(String(currentSellPrice));
       setSellDate(new Date());
       setWalletId("");
       setErrors({});
     }
+  }, [open, holding, currentSellPrice]);
+
+  const handleOpenChange = (isOpen: boolean) => {
     onOpenChange(isOpen);
   };
 
@@ -123,7 +127,7 @@ export function SellGoldDialog({
             variant="secondary"
             className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0"
           >
-            {holding.type}
+            {GOLD_TYPE_LABELS[holding.type] ?? holding.type}
           </Badge>
           <div className="flex-1 text-sm">
             <span className="font-medium text-foreground">
@@ -142,6 +146,7 @@ export function SellGoldDialog({
                 {t("gold.sellQty")} ({t("gold.unit")})
               </Label>
               <Input
+                className={cn(errors.qty && "border-destructive focus-visible:ring-destructive")}
                 type="number"
                 placeholder="0"
                 value={sellQty}
@@ -157,11 +162,15 @@ export function SellGoldDialog({
             <div className="space-y-1.5">
               <Label>{t("gold.sellPrice")} (VND)</Label>
               <Input
-                type="number"
+                className={cn(errors.price && "border-destructive focus-visible:ring-destructive")}
+                type="text"
+                inputMode="numeric"
                 placeholder="0"
-                value={sellPrice}
-                onChange={(e) => setSellPrice(e.target.value)}
-                min={0}
+                value={sellPrice ? Number(sellPrice).toLocaleString("vi-VN") : ""}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, "");
+                  setSellPrice(raw);
+                }}
               />
               {errors.price && (
                 <p className="text-xs text-destructive">{errors.price}</p>
@@ -200,7 +209,9 @@ export function SellGoldDialog({
             <div className="space-y-1.5">
               <Label>{t("gold.sellWallet")}</Label>
               <Select value={walletId} onValueChange={setWalletId}>
-                <SelectTrigger>
+                <SelectTrigger
+                  className={cn(errors.wallet && "border-destructive focus:ring-destructive")}
+                >
                   <SelectValue placeholder={t("gold.sellWalletPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>

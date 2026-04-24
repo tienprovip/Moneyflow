@@ -13,6 +13,7 @@ const translations = {
   "nav.lightMode": { vi: "Chế độ sáng", en: "Light Mode" },
   "nav.darkShort": { vi: "Tối", en: "Dark" },
   "nav.lightShort": { vi: "Sáng", en: "Light" },
+  "nav.logout": { vi: "Đăng xuất", en: "Logout" },
 
   // Dashboard - Greeting
   "greeting.morning": { vi: "Chào buổi sáng", en: "Good morning" },
@@ -328,11 +329,11 @@ const translations = {
   "gold.currentValue": { vi: "Giá trị hiện tại", en: "Current Value" },
   "gold.profitLoss": { vi: "Lãi / Lỗ", en: "Profit / Loss" },
   "gold.totalQty": { vi: "Tổng số lượng", en: "Total Quantity" },
-  "gold.unit": { vi: "lượng", en: "tael" },
+  "gold.unit": { vi: "chỉ", en: "chi" },
   "gold.entries": { vi: "lần mua", en: "entries" },
   "gold.priceChart": {
-    vi: "Biến động giá vàng SJC",
-    en: "SJC Gold Price Trend",
+    vi: "Biến động giá vàng SJC (giá / chỉ)",
+    en: "SJC Gold Price Trend (per chi)",
   },
   "gold.last7Months": { vi: "7 tháng gần nhất", en: "Last 7 months" },
   "gold.priceLabel": { vi: "Giá vàng", en: "Gold Price" },
@@ -438,6 +439,25 @@ const translations = {
   "gold.avgAtSell": { vi: "Giá BQ lúc bán", en: "Avg at sell time" },
   "gold.totalCount": { vi: "loại", en: "types" },
   "gold.holdingQty": { vi: "Số lượng đang giữ", en: "Holding Qty" },
+  "gold.sourceWallet": { vi: "Ví mua", en: "Source wallet" },
+  "dialog.optional": { vi: " (không bắt buộc)", en: " (optional)" },
+  "gold.sourceWalletPlaceholder": {
+    vi: "Chọn ví đã dùng để mua",
+    en: "Select wallet used for purchase",
+  },
+  "gold.sourceWalletHint": {
+    vi: "Nếu chọn ví, số dư sẽ bị trừ và giao dịch chi được tạo tự động",
+    en: "If selected, wallet balance will be deducted and an expense is created automatically",
+  },
+  "gold.walletBalance": { vi: "Số dư ví", en: "Wallet balance" },
+  "gold.totalCost": { vi: "Tổng tiền mua", en: "Total cost" },
+  "gold.remaining": { vi: "Số dư còn lại", en: "Remaining balance" },
+  "gold.insufficientHint": { vi: "Thiếu", en: "Short by" },
+  "gold.loadError": { vi: "Không thể tải dữ liệu vàng", en: "Failed to load gold data" },
+  "account.insufficientSourceBalance": {
+    vi: "Số dư ví không đủ để thực hiện giao dịch này",
+    en: "Insufficient wallet balance for this transaction",
+  },
 
   // Top Spending
   "spending.title": {

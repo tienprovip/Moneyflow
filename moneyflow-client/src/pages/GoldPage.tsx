@@ -4,28 +4,27 @@ import { useLanguage } from "@/hooks/use-language";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Plus } from "lucide-react";
+import { Plus, Loader2, AlertCircle } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { GoldDialog, type GoldHolding } from "@/components/gold/GoldDialog";
+import { GoldDialog } from "@/components/gold/GoldDialog";
 import { SellGoldDialog } from "@/components/gold/SellGoldDialog";
 import { GoldTypeCard } from "@/components/gold/GoldTypeCard";
 import { GoldTypeDetailDialog } from "@/components/gold/GoldTypeDetailDialog";
 import { GoldSummaryCards } from "@/components/gold/GoldSummaryCards";
 import { GoldPriceChart } from "@/components/gold/GoldPriceChart";
 import { GoldMarketPrices } from "@/components/gold/GoldMarketPrice";
-import { useGoldPortfolio } from "@/hooks/use-gold-portfolio";
-
-import type { GoldType } from "@/types/gold";
-import {
-  CURRENT_GOLD_PRICES,
-  GOLD_TREND,
-  GOLD_WALLETS,
-  MOCK_HOLDINGS,
-  MOCK_SALES,
-} from "@/data/gold-mock";
+import { useGoldPortfolio, useGoldMarketPrices } from "@/hooks/use-gold-portfolio";
+import { useWallets } from "@/hooks/use-wallets";
+import type { GoldHolding, GoldType, GoldTypeAggregate } from "@/types/gold";
 
 const GoldPage = () => {
   const { t } = useLanguage();
+  const { wallets } = useWallets();
+  const { data: dynamicPrices, isLoading: isLoadingPrices, isError: isErrorPrices } = useGoldMarketPrices();
+
+  // Dùng giá thực tế hoặc fallback object rỗng nếu fetch thất bại/chưa xong
+  const activePrices = dynamicPrices ?? {};
+
   const {
     holdings,
     sales,
@@ -35,23 +34,27 @@ const GoldPage = () => {
     updateHolding,
     deleteHolding,
     sellGold,
-  } = useGoldPortfolio({
-    initialHoldings: MOCK_HOLDINGS,
-    initialSales: MOCK_SALES,
-    prices: CURRENT_GOLD_PRICES,
-  });
+    isLoading: isLoadingPortfolio,
+    isError: isErrorPortfolio,
+  } = useGoldPortfolio({ prices: activePrices });
 
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<GoldHolding | null>(null);
   const [presetType, setPresetType] = useState<GoldType | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null); // goldId
   const [sellingType, setSellingType] = useState<GoldType | null>(null);
   const [sellDialogOpen, setSellDialogOpen] = useState(false);
   const [detailType, setDetailType] = useState<GoldType | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  // Holding handlers
+  // Danh sách ví cho dialog bán / mua (kèm balance để validate)
+  const walletOptions = useMemo(
+    () => wallets.map((w) => ({ id: w.id, name: w.name, balance: w.balance })),
+    [wallets],
+  );
+
+  // ─── Holding handlers ──────────────────────────────────────────────────────
   const openAdd = useCallback((type: GoldType | null = null) => {
     setEditing(null);
     setPresetType(type);
@@ -65,36 +68,44 @@ const GoldPage = () => {
   }, []);
 
   const handleSave = useCallback(
-    (data: GoldHolding) => {
+    async (data: {
+      type: GoldType;
+      quantity: number;
+      purchasePrice: number;
+      purchaseDate: string;
+      notes?: string;
+      sourceAccountId?: string;
+    }) => {
       if (editing) {
-        updateHolding(editing.id, data);
+        // Edit: update (backend chưa hỗ trợ, chỉ show toast)
+        await updateHolding(editing.id, data);
       } else {
-        addHolding(data);
+        await addHolding(data);
+        toast({
+          title: t("gold.added"),
+          description: t("gold.addedDesc"),
+        });
       }
-      toast({
-        title: editing ? t("gold.updated") : t("gold.added"),
-        description: editing ? t("gold.updatedDesc") : t("gold.addedDesc"),
-      });
     },
     [editing, t, addHolding, updateHolding],
   );
 
   const handleDelete = useCallback(
-    (id: string) => {
-      deleteHolding(id);
+    async (goldId: string) => {
+      await deleteHolding(goldId);
       toast({ title: t("gold.deleted"), description: t("gold.deletedDesc") });
       setDeleteId(null);
     },
     [t, deleteHolding],
   );
 
-  // Sell handlers
+  // ─── Sell handlers ─────────────────────────────────────────────────────────
   const openSell = useCallback((type: GoldType) => {
     setSellingType(type);
     setSellDialogOpen(true);
   }, []);
 
-  const sellingAggregate = useMemo(
+  const sellingAggregate = useMemo<GoldTypeAggregate | null>(
     () =>
       sellingType
         ? (aggregates.find((a) => a.type === sellingType) ?? null)
@@ -102,11 +113,12 @@ const GoldPage = () => {
     [sellingType, aggregates],
   );
 
-  // Synthetic holding to keep SellGoldDialog API unchanged
+  // Synthetic holding để SellGoldDialog không cần thay đổi
   const sellingSyntheticHolding: GoldHolding | null = useMemo(() => {
     if (!sellingAggregate) return null;
     return {
       id: `agg-${sellingAggregate.type}`,
+      goldId: sellingAggregate.goldId,
       type: sellingAggregate.type,
       quantity: sellingAggregate.totalQty,
       purchaseDate: new Date().toISOString().slice(0, 10),
@@ -115,7 +127,7 @@ const GoldPage = () => {
   }, [sellingAggregate]);
 
   const handleSell = useCallback(
-    (
+    async (
       _holdingId: string,
       quantity: number,
       sellPrice: number,
@@ -123,13 +135,13 @@ const GoldPage = () => {
       walletId: string,
     ) => {
       if (!sellingType) return;
-      sellGold(sellingType, quantity, sellPrice, sellDate, walletId);
+      await sellGold(sellingType, quantity, sellPrice, sellDate, walletId);
       toast({ title: t("gold.sold"), description: t("gold.soldDesc") });
     },
     [sellingType, sellGold, t],
   );
 
-  // Detail
+  // ─── Detail ────────────────────────────────────────────────────────────────
   const openDetail = useCallback((type: GoldType) => {
     setDetailType(type);
     setDetailOpen(true);
@@ -143,6 +155,30 @@ const GoldPage = () => {
     () => (detailType ? sales.filter((s) => s.type === detailType) : []),
     [detailType, sales],
   );
+
+  // ─── Loading / Error ───────────────────────────────────────────────────────
+  if (isLoadingPortfolio || isLoadingPrices) {
+    return (
+      <DashboardLayout onFabClick={() => openAdd(null)}>
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (isErrorPortfolio || isErrorPrices) {
+    return (
+      <DashboardLayout onFabClick={() => openAdd(null)}>
+        <div className="flex flex-col items-center justify-center py-24 gap-3">
+          <AlertCircle className="w-8 h-8 text-destructive" />
+          <p className="text-sm text-muted-foreground">
+            {t("gold.loadError")}
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout onFabClick={() => openAdd(null)}>
@@ -175,8 +211,8 @@ const GoldPage = () => {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
-        <GoldPriceChart data={GOLD_TREND} />
-        <GoldMarketPrices prices={CURRENT_GOLD_PRICES} />
+        <GoldPriceChart data={[]} />
+        <GoldMarketPrices prices={activePrices} />
       </div>
 
       {/* Holdings grouped by Type */}
@@ -219,25 +255,11 @@ const GoldPage = () => {
       <GoldDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        editing={
-          editing ??
-          (presetType
-            ? ({
-                id: "",
-                type: presetType,
-                quantity: 0,
-                purchaseDate: new Date().toISOString().slice(0, 10),
-                purchasePrice: 0,
-              } as GoldHolding)
-            : null)
-        }
-        onSave={(data) => {
-          if (!editing && presetType) {
-            handleSave({ ...data, id: crypto.randomUUID() });
-          } else {
-            handleSave(data);
-          }
-        }}
+        editing={editing}
+        presetType={presetType}
+        marketPrices={activePrices}
+        wallets={walletOptions}
+        onSave={handleSave}
       />
 
       <SellGoldDialog
@@ -245,9 +267,9 @@ const GoldPage = () => {
         onOpenChange={setSellDialogOpen}
         holding={sellingSyntheticHolding}
         currentSellPrice={
-          sellingType ? (CURRENT_GOLD_PRICES[sellingType]?.sell ?? 0) : 0
+          sellingType ? (activePrices[sellingType]?.sell ?? 0) : 0
         }
-        wallets={GOLD_WALLETS}
+        wallets={walletOptions}
         onSell={handleSell}
       />
 

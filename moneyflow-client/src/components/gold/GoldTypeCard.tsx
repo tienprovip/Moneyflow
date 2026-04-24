@@ -11,6 +11,7 @@ import {
 import { fmtVND } from "@/lib/format";
 import { useLanguage } from "@/hooks/use-language";
 import type { GoldTypeAggregate } from "@/types/gold";
+import { GOLD_TYPE_LABELS } from "@/types/gold";
 
 interface Props {
   data: GoldTypeAggregate;
@@ -33,7 +34,7 @@ export function GoldTypeCard({ data, onView, onBuy, onSell }: Props) {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
               <span className="text-sm font-bold text-amber-700 dark:text-amber-400">
-                {data.type.slice(0, 3)}
+                {GOLD_TYPE_LABELS[data.type]?.slice(0, 3) ?? data.type.slice(0, 3)}
               </span>
             </div>
             <div>
@@ -41,7 +42,7 @@ export function GoldTypeCard({ data, onView, onBuy, onSell }: Props) {
                 variant="secondary"
                 className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0 font-medium"
               >
-                {data.type}
+                {GOLD_TYPE_LABELS[data.type] ?? data.type}
               </Badge>
               <p className="text-xs text-muted-foreground mt-1">
                 {data.buyCount} {t("gold.entries")}
