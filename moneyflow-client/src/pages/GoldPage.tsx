@@ -267,7 +267,7 @@ const GoldPage = () => {
         onOpenChange={setSellDialogOpen}
         holding={sellingSyntheticHolding}
         currentSellPrice={
-          sellingType ? (activePrices[sellingType]?.sell ?? 0) : 0
+          sellingType ? (activePrices[sellingType]?.buy ?? 0) : 0
         }
         wallets={walletOptions}
         onSell={handleSell}

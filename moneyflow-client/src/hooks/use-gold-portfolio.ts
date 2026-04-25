@@ -64,7 +64,7 @@ const buildAggregate = (
   prices: Record<string, { buy: number; sell: number }>,
 ): GoldTypeAggregate => {
   const mappedType = mapLegacyType(gold.goldType);
-  const currentPrice = prices[mappedType]?.sell ?? 0;
+  const currentPrice = prices[mappedType]?.buy ?? 0;
   const currentValue = gold.totalWeight * currentPrice;
   const pl = currentValue - gold.totalCostBasis;
   const plPct =
@@ -179,7 +179,7 @@ export const useGoldPortfolio = ({ prices }: UseGoldPortfolioOptions) => {
     }) => {
       // Tìm vị thế đang hold của goldType này
       const existing = goldPositions.find(
-        (g) => g.goldType === data.type && g.status === "holding",
+        (g) => mapLegacyType(g.goldType) === data.type && g.status === "holding",
       );
 
       if (existing) {

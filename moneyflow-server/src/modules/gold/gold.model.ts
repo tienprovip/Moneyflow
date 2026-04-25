@@ -37,7 +37,6 @@ export interface IGoldSellLog {
   profit: number;           // totalSellAmount - avgCostBasis
   sellDate: Date;
   sellAccountId: mongoose.Types.ObjectId;
-  transferTransactionId?: mongoose.Types.ObjectId;
   incomeTransactionId?: mongoose.Types.ObjectId;
 }
 
@@ -63,7 +62,6 @@ const GoldSellLogSchema = new Schema<IGoldSellLog>(
     profit: { type: Number, required: true },
     sellDate: { type: Date, required: true },
     sellAccountId: { type: Schema.Types.ObjectId, ref: "Account", required: true },
-    transferTransactionId: { type: Schema.Types.ObjectId, ref: "Transaction" },
     incomeTransactionId: { type: Schema.Types.ObjectId, ref: "Transaction" },
   },
   { _id: true },

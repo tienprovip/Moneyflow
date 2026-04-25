@@ -118,17 +118,16 @@ export function SellGoldDialog({
       <DialogContent className="sm:max-w-110">
         <DialogHeader>
           <DialogTitle>{t("gold.sellTitle")}</DialogTitle>
-          <DialogDescription>{t("gold.sellDesc")}</DialogDescription>
-        </DialogHeader>
-
-        {/* Holding info */}
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
           <Badge
             variant="secondary"
-            className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0"
+            className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-0 mt-3 p-3"
           >
             {GOLD_TYPE_LABELS[holding.type] ?? holding.type}
           </Badge>
+        </DialogHeader>
+
+        {/* Holding info */}
+        <div className="p-3 rounded-lg bg-secondary/50">
           <div className="flex-1 text-sm">
             <span className="font-medium text-foreground">
               {holding.quantity} {t("gold.unit")}

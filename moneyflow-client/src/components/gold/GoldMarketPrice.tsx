@@ -30,13 +30,13 @@ export const GoldMarketPrices = ({ prices }: Props) => {
                 <p className="text-xs text-muted-foreground">
                   {t("gold.buy")}:{" "}
                   <span className="font-medium text-foreground">
-                    {(p.buy / 1e6).toFixed(1)}M
+                    {(p.buy / 1e6).toFixed(2)}M
                   </span>
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {t("gold.sell")}:{" "}
                   <span className="font-medium text-foreground">
-                    {(p.sell / 1e6).toFixed(1)}M
+                    {(p.sell / 1e6).toFixed(2)}M
                   </span>
                 </p>
               </div>

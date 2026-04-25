@@ -11,7 +11,45 @@ const GOLD_SELL_PRINCIPAL_TITLE = "Hoàn gốc bán vàng";
 const GOLD_SELL_PROFIT_TITLE = "Lãi đầu tư vàng";
 
 // ─── Helper: lấy / tạo category đầu tư ─────────────────────────────────────
-const findOrCreateInvestmentIncomeCategory = async (
+const findOrCreateBuyGoldCategory = async (
+  userId: string,
+  session: mongoose.ClientSession,
+) => {
+  const existing = await CategoryModel.findOne({
+    type: CategoryType.EXPENSE,
+    $or: [
+      { userId, isDefault: false },
+      { isDefault: true },
+    ],
+    $and: [
+      {
+        $or: [
+          { "name.vi": { $regex: /mua vàng/i } },
+          { "name.en": { $regex: /buy gold/i } },
+        ],
+      },
+    ],
+  }).session(session);
+
+  if (existing) return existing;
+
+  const [created] = await CategoryModel.create(
+    [
+      {
+        userId,
+        type: CategoryType.EXPENSE,
+        name: { en: "Buy Gold", vi: "Mua vàng" },
+        icon: "Coins",
+        color: "bg-amber-100 text-amber-700",
+        isDefault: false,
+      },
+    ],
+    { session },
+  );
+  return created;
+};
+
+const findOrCreateSellGoldCategory = async (
   userId: string,
   session: mongoose.ClientSession,
 ) => {
@@ -24,8 +62,8 @@ const findOrCreateInvestmentIncomeCategory = async (
     $and: [
       {
         $or: [
-          { "name.vi": { $regex: /đầu tư|lãi/i } },
-          { "name.en": { $regex: /invest|return|profit/i } },
+          { "name.vi": { $regex: /bán vàng/i } },
+          { "name.en": { $regex: /sell gold/i } },
         ],
       },
     ],
@@ -38,9 +76,9 @@ const findOrCreateInvestmentIncomeCategory = async (
       {
         userId,
         type: CategoryType.INCOME,
-        name: { en: "Investment return", vi: "Lãi đầu tư" },
-        icon: "TrendingUp",
-        color: "bg-emerald-100 text-emerald-700",
+        name: { en: "Sell Gold", vi: "Bán vàng" },
+        icon: "Coins",
+        color: "bg-amber-100 text-amber-700",
         isDefault: false,
       },
     ],
@@ -112,6 +150,7 @@ export const createGoldService = async (userId: string, data: any) => {
             date: buyDate,
             title: GOLD_BUY_TITLE,
             note: GOLD_BUY_TITLE,
+            categoryId: (await findOrCreateBuyGoldCategory(userId, session))._id,
           },
         ],
         { session },
@@ -223,6 +262,7 @@ export const buyMoreGoldService = async (
             date: buyDate,
             title: GOLD_BUY_TITLE,
             note: GOLD_BUY_TITLE,
+            categoryId: (await findOrCreateBuyGoldCategory(userId, session))._id,
           },
         ],
         { session },
@@ -321,72 +361,27 @@ export const sellGoldService = async (
     sellAccount.balance += totalSellAmount;
     await sellAccount.save({ session });
 
-    let transferTransactionId: mongoose.Types.ObjectId | undefined;
     let incomeTransactionId: mongoose.Types.ObjectId | undefined;
 
-    if (gold.primaryAccountId && avgCostBasis > 0) {
-      // Có ví gốc → TRANSFER (hoàn vốn bình quân) + INCOME (lãi, nếu dương)
-      const [transferTx] = await TransactionModel.create(
-        [
-          {
-            userId,
-            accountId: gold.primaryAccountId,
-            toAccountId: sellAccount._id,
-            type: TransactionType.TRANSFER,
-            amount: avgCostBasis,
-            currencyCode: gold.currencyCode,
-            date: sellDate,
-            title: GOLD_SELL_PRINCIPAL_TITLE,
-            note: `${GOLD_SELL_PRINCIPAL_TITLE} (${sellWeight} chỉ @ bình quân ${Math.round(gold.avgBuyPrice).toLocaleString()})`,
-          },
-        ],
-        { session },
-      );
-      transferTransactionId = transferTx._id as mongoose.Types.ObjectId;
-
-      if (profit > 0) {
-        const incomeCategory = await findOrCreateInvestmentIncomeCategory(userId, session);
-        const [incomeTx] = await TransactionModel.create(
-          [
-            {
-              userId,
-              accountId: sellAccount._id,
-              type: TransactionType.INCOME,
-              amount: profit,
-              currencyCode: gold.currencyCode,
-              date: sellDate,
-              title: GOLD_SELL_PROFIT_TITLE,
-              note: `${GOLD_SELL_PROFIT_TITLE} (${sellWeight} chỉ)`,
-              categoryId: incomeCategory._id,
-              isInvestmentReturn: true,
-            },
-          ],
-          { session },
-        );
-        incomeTransactionId = incomeTx._id as mongoose.Types.ObjectId;
-      }
-    } else {
-      // Không có ví gốc → toàn bộ là INCOME
-      const incomeCategory = await findOrCreateInvestmentIncomeCategory(userId, session);
-      const [incomeTx] = await TransactionModel.create(
-        [
-          {
-            userId,
-            accountId: sellAccount._id,
-            type: TransactionType.INCOME,
-            amount: totalSellAmount,
-            currencyCode: gold.currencyCode,
-            date: sellDate,
-            title: GOLD_SELL_PROFIT_TITLE,
-            note: `${GOLD_SELL_PROFIT_TITLE} (${sellWeight} chỉ)`,
-            categoryId: incomeCategory._id,
-            isInvestmentReturn: true,
-          },
-        ],
-        { session },
-      );
-      incomeTransactionId = incomeTx._id as mongoose.Types.ObjectId;
-    }
+    const sellGoldCategory = await findOrCreateSellGoldCategory(userId, session);
+    const [incomeTx] = await TransactionModel.create(
+      [
+        {
+          userId,
+          accountId: sellAccount._id,
+          type: TransactionType.INCOME,
+          amount: totalSellAmount,
+          currencyCode: gold.currencyCode,
+          date: sellDate,
+          title: "Bán vàng",
+          note: `Bán vàng (${sellWeight} chỉ)`,
+          categoryId: sellGoldCategory._id,
+          isInvestmentReturn: true,
+        },
+      ],
+      { session },
+    );
+    incomeTransactionId = incomeTx._id as mongoose.Types.ObjectId;
 
     // Ghi sellLog
     gold.sellLogs.push({
@@ -398,7 +393,6 @@ export const sellGoldService = async (
       profit,
       sellDate,
       sellAccountId: sellAccount._id as mongoose.Types.ObjectId,
-      transferTransactionId,
       incomeTransactionId,
     });
 

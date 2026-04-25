@@ -86,7 +86,7 @@ export const GoldDialog = ({
         const type = presetType || GoldType.KGB;
         setFormType(type);
         setFormQty("");
-        setFormPrice(marketPrices[type]?.buy?.toString() || "");
+        setFormPrice(marketPrices[type]?.sell?.toString() || "");
         setFormDate(new Date());
         setFormNotes("");
         setFormWalletId("");
@@ -180,7 +180,7 @@ export const GoldDialog = ({
                   const newType = v as GoldType;
                   setFormType(newType);
                   if (!editing) {
-                    setFormPrice(marketPrices[newType]?.buy?.toString() || "");
+                    setFormPrice(marketPrices[newType]?.sell?.toString() || "");
                   }
                 }}
                 disabled={!!editing}
