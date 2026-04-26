@@ -10,6 +10,7 @@ import {
   sellGold,
   deleteGold,
   fetchMarketPrices,
+  fetchHistoricalPrices,
   type CreateGoldPayload,
   type BuyMoreGoldPayload,
   type SellGoldPayload,
@@ -91,6 +92,15 @@ export const useGoldMarketPrices = () => {
     queryKey: [...queryKeys.gold, "marketPrices"],
     queryFn: fetchMarketPrices,
     refetchInterval: 5 * 60 * 1000, // Refetch every 5 mins
+    staleTime: 4 * 60 * 1000,
+  });
+};
+
+export const useGoldMarketHistory = () => {
+  return useQuery({
+    queryKey: [...queryKeys.gold, "marketHistory"],
+    queryFn: fetchHistoricalPrices,
+    refetchInterval: 5 * 60 * 1000,
     staleTime: 4 * 60 * 1000,
   });
 };

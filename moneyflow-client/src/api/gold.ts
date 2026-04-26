@@ -16,6 +16,18 @@ export const fetchMarketPrices = async (): Promise<Record<string, { buy: number;
   return res.data;
 };
 
+// ─── GET MARKET HISTORY ──────────────────────────────────────────────────────
+export interface HistoricalPrice {
+  date: string;
+  buy: number;
+  sell: number;
+}
+
+export const fetchHistoricalPrices = async (): Promise<Record<string, HistoricalPrice[]>> => {
+  const res = await axiosInstance.get("/gold/market-prices/history");
+  return res.data;
+};
+
 // ─── CREATE (vị thế mới — lần mua đầu tiên của 1 loại vàng) ──────────────────
 export interface CreateGoldPayload {
   goldType: string;

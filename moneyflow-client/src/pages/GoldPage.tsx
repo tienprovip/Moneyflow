@@ -13,7 +13,7 @@ import { GoldTypeDetailDialog } from "@/components/gold/GoldTypeDetailDialog";
 import { GoldSummaryCards } from "@/components/gold/GoldSummaryCards";
 import { GoldPriceChart } from "@/components/gold/GoldPriceChart";
 import { GoldMarketPrices } from "@/components/gold/GoldMarketPrice";
-import { useGoldPortfolio, useGoldMarketPrices } from "@/hooks/use-gold-portfolio";
+import { useGoldPortfolio, useGoldMarketPrices, useGoldMarketHistory } from "@/hooks/use-gold-portfolio";
 import { useWallets } from "@/hooks/use-wallets";
 import type { GoldHolding, GoldType, GoldTypeAggregate } from "@/types/gold";
 
@@ -21,6 +21,7 @@ const GoldPage = () => {
   const { t } = useLanguage();
   const { wallets } = useWallets();
   const { data: dynamicPrices, isLoading: isLoadingPrices, isError: isErrorPrices } = useGoldMarketPrices();
+  const { data: marketHistory } = useGoldMarketHistory();
 
   // Dùng giá thực tế hoặc fallback object rỗng nếu fetch thất bại/chưa xong
   const activePrices = dynamicPrices ?? {};
@@ -211,7 +212,7 @@ const GoldPage = () => {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
-        <GoldPriceChart data={[]} />
+        <GoldPriceChart historyData={marketHistory ?? {}} />
         <GoldMarketPrices prices={activePrices} />
       </div>
 
