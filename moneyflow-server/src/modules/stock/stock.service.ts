@@ -49,6 +49,44 @@ const findOrCreateInvestmentIncomeCategory = async (
   return created;
 };
 
+const findOrCreateInvestmentExpenseCategory = async (
+  userId: string,
+  session: mongoose.ClientSession,
+) => {
+  const existing = await CategoryModel.findOne({
+    type: CategoryType.EXPENSE,
+    $or: [
+      { userId, isDefault: false },
+      { isDefault: true },
+    ],
+    $and: [
+      {
+        $or: [
+          { "name.vi": { $regex: /đầu tư/i } },
+          { "name.en": { $regex: /invest/i } },
+        ],
+      },
+    ],
+  }).session(session);
+
+  if (existing) return existing;
+
+  const [created] = await CategoryModel.create(
+    [
+      {
+        userId,
+        type: CategoryType.EXPENSE,
+        name: { en: "Investment", vi: "Đầu tư" },
+        icon: "TrendingUp",
+        color: "bg-blue-100 text-blue-700",
+        isDefault: false,
+      },
+    ],
+    { session },
+  );
+  return created;
+};
+
 // ─── Helper: tính giá bình quân gia quyền ───────────────────────────────────
 /**
  * avgBuyPrice mới = (totalCostBasis + purchaseAmount) / (totalQty + quantity)
@@ -104,6 +142,7 @@ export const createStockService = async (userId: string, data: any) => {
             date: buyDate,
             title: `${STOCK_BUY_TITLE} ${data.symbol ?? ""}`.trim(),
             note: `${STOCK_BUY_TITLE} ${data.symbol ?? ""}`.trim(),
+            categoryId: (await findOrCreateInvestmentExpenseCategory(userId, session))._id,
           },
         ],
         { session },
@@ -217,6 +256,7 @@ export const buyMoreStockService = async (
             date: buyDate,
             title: `${STOCK_BUY_TITLE} ${stock.symbol}`,
             note: `${STOCK_BUY_TITLE} ${stock.symbol}`,
+            categoryId: (await findOrCreateInvestmentExpenseCategory(userId, session))._id,
           },
         ],
         { session },
@@ -321,69 +361,25 @@ export const sellStockService = async (
     let transferTransactionId: mongoose.Types.ObjectId | undefined;
     let incomeTransactionId: mongoose.Types.ObjectId | undefined;
 
-    if (stock.primaryAccountId && avgCostBasis > 0) {
-      // Có ví gốc → TRANSFER (hoàn vốn) + INCOME (lãi, nếu dương)
-      const [transferTx] = await TransactionModel.create(
-        [
-          {
-            userId,
-            accountId: stock.primaryAccountId,
-            toAccountId: sellAccount._id,
-            type: TransactionType.TRANSFER,
-            amount: avgCostBasis,
-            currencyCode: stock.currencyCode,
-            date: sellDate,
-            title: `${STOCK_SELL_PRINCIPAL_TITLE} ${stock.symbol}`,
-            note: `${STOCK_SELL_PRINCIPAL_TITLE} ${stock.symbol} (${sellQty} cp @ bình quân ${Math.round(stock.avgBuyPrice).toLocaleString()})`,
-          },
-        ],
-        { session },
-      );
-      transferTransactionId = transferTx._id as mongoose.Types.ObjectId;
-
-      if (profit > 0) {
-        const incomeCategory = await findOrCreateInvestmentIncomeCategory(userId, session);
-        const [incomeTx] = await TransactionModel.create(
-          [
-            {
-              userId,
-              accountId: sellAccount._id,
-              type: TransactionType.INCOME,
-              amount: profit,
-              currencyCode: stock.currencyCode,
-              date: sellDate,
-              title: `${STOCK_SELL_PROFIT_TITLE} ${stock.symbol}`,
-              note: `${STOCK_SELL_PROFIT_TITLE} ${stock.symbol} (${sellQty} cp)`,
-              categoryId: incomeCategory._id,
-              isInvestmentReturn: true,
-            },
-          ],
-          { session },
-        );
-        incomeTransactionId = incomeTx._id as mongoose.Types.ObjectId;
-      }
-    } else {
-      // Không có ví gốc → toàn bộ là INCOME
-      const incomeCategory = await findOrCreateInvestmentIncomeCategory(userId, session);
-      const [incomeTx] = await TransactionModel.create(
-        [
-          {
-            userId,
-            accountId: sellAccount._id,
-            type: TransactionType.INCOME,
-            amount: totalSellAmount,
-            currencyCode: stock.currencyCode,
-            date: sellDate,
-            title: `${STOCK_SELL_PROFIT_TITLE} ${stock.symbol}`,
-            note: `${STOCK_SELL_PROFIT_TITLE} ${stock.symbol} (${sellQty} cp)`,
-            categoryId: incomeCategory._id,
-            isInvestmentReturn: true,
-          },
-        ],
-        { session },
-      );
-      incomeTransactionId = incomeTx._id as mongoose.Types.ObjectId;
-    }
+    const incomeCategory = await findOrCreateInvestmentIncomeCategory(userId, session);
+    const [incomeTx] = await TransactionModel.create(
+      [
+        {
+          userId,
+          accountId: sellAccount._id,
+          type: TransactionType.INCOME,
+          amount: totalSellAmount,
+          currencyCode: stock.currencyCode,
+          date: sellDate,
+          title: "Bán cổ phiếu",
+          note: `Bán cổ phiếu ${stock.symbol} (${sellQty} cp)`,
+          categoryId: incomeCategory._id,
+          isInvestmentReturn: true,
+        },
+      ],
+      { session },
+    );
+    incomeTransactionId = incomeTx._id as mongoose.Types.ObjectId;
 
     // Ghi sellLog
     stock.sellLogs.push({

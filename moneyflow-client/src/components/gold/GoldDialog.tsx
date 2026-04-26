@@ -370,7 +370,7 @@ export const GoldDialog = ({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={saving}
-            className="mt-2"
+            className="mt-2 sm:mt-0"
           >
             {t("dialog.cancel")}
           </Button>

@@ -11,45 +11,7 @@ const GOLD_SELL_PRINCIPAL_TITLE = "Hoàn gốc bán vàng";
 const GOLD_SELL_PROFIT_TITLE = "Lãi đầu tư vàng";
 
 // ─── Helper: lấy / tạo category đầu tư ─────────────────────────────────────
-const findOrCreateBuyGoldCategory = async (
-  userId: string,
-  session: mongoose.ClientSession,
-) => {
-  const existing = await CategoryModel.findOne({
-    type: CategoryType.EXPENSE,
-    $or: [
-      { userId, isDefault: false },
-      { isDefault: true },
-    ],
-    $and: [
-      {
-        $or: [
-          { "name.vi": { $regex: /mua vàng/i } },
-          { "name.en": { $regex: /buy gold/i } },
-        ],
-      },
-    ],
-  }).session(session);
-
-  if (existing) return existing;
-
-  const [created] = await CategoryModel.create(
-    [
-      {
-        userId,
-        type: CategoryType.EXPENSE,
-        name: { en: "Buy Gold", vi: "Mua vàng" },
-        icon: "Coins",
-        color: "bg-amber-100 text-amber-700",
-        isDefault: false,
-      },
-    ],
-    { session },
-  );
-  return created;
-};
-
-const findOrCreateSellGoldCategory = async (
+const findOrCreateInvestmentIncomeCategory = async (
   userId: string,
   session: mongoose.ClientSession,
 ) => {
@@ -62,8 +24,8 @@ const findOrCreateSellGoldCategory = async (
     $and: [
       {
         $or: [
-          { "name.vi": { $regex: /bán vàng/i } },
-          { "name.en": { $regex: /sell gold/i } },
+          { "name.vi": { $regex: /đầu tư|lãi/i } },
+          { "name.en": { $regex: /invest|return|profit/i } },
         ],
       },
     ],
@@ -76,9 +38,47 @@ const findOrCreateSellGoldCategory = async (
       {
         userId,
         type: CategoryType.INCOME,
-        name: { en: "Sell Gold", vi: "Bán vàng" },
-        icon: "Coins",
-        color: "bg-amber-100 text-amber-700",
+        name: { en: "Investment return", vi: "Lãi đầu tư" },
+        icon: "TrendingUp",
+        color: "bg-emerald-100 text-emerald-700",
+        isDefault: false,
+      },
+    ],
+    { session },
+  );
+  return created;
+};
+
+const findOrCreateInvestmentExpenseCategory = async (
+  userId: string,
+  session: mongoose.ClientSession,
+) => {
+  const existing = await CategoryModel.findOne({
+    type: CategoryType.EXPENSE,
+    $or: [
+      { userId, isDefault: false },
+      { isDefault: true },
+    ],
+    $and: [
+      {
+        $or: [
+          { "name.vi": { $regex: /đầu tư/i } },
+          { "name.en": { $regex: /invest/i } },
+        ],
+      },
+    ],
+  }).session(session);
+
+  if (existing) return existing;
+
+  const [created] = await CategoryModel.create(
+    [
+      {
+        userId,
+        type: CategoryType.EXPENSE,
+        name: { en: "Investment", vi: "Đầu tư" },
+        icon: "TrendingUp",
+        color: "bg-blue-100 text-blue-700",
         isDefault: false,
       },
     ],
@@ -150,7 +150,7 @@ export const createGoldService = async (userId: string, data: any) => {
             date: buyDate,
             title: GOLD_BUY_TITLE,
             note: GOLD_BUY_TITLE,
-            categoryId: (await findOrCreateBuyGoldCategory(userId, session))._id,
+            categoryId: (await findOrCreateInvestmentExpenseCategory(userId, session))._id,
           },
         ],
         { session },
@@ -262,7 +262,7 @@ export const buyMoreGoldService = async (
             date: buyDate,
             title: GOLD_BUY_TITLE,
             note: GOLD_BUY_TITLE,
-            categoryId: (await findOrCreateBuyGoldCategory(userId, session))._id,
+            categoryId: (await findOrCreateInvestmentExpenseCategory(userId, session))._id,
           },
         ],
         { session },
@@ -363,7 +363,7 @@ export const sellGoldService = async (
 
     let incomeTransactionId: mongoose.Types.ObjectId | undefined;
 
-    const sellGoldCategory = await findOrCreateSellGoldCategory(userId, session);
+    const sellGoldCategory = await findOrCreateInvestmentIncomeCategory(userId, session);
     const [incomeTx] = await TransactionModel.create(
       [
         {

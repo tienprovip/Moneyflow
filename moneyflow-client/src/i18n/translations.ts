@@ -116,6 +116,18 @@ const translations = {
     vi: "Giá phải lớn hơn 0",
     en: "Price must be greater than 0",
   },
+  "stocks.buyMore": { vi: "Mua thêm", en: "Buy More" },
+  "stocks.sellTitle": { vi: "Bán", en: "Sell" },
+  "stocks.buyMoreTitle": { vi: "Mua thêm cổ phiếu", en: "Buy More Stock" },
+  "stocks.buyMoreDesc": { vi: "Mua thêm vào vị thế hiện tại", en: "Buy more into current position" },
+  "stocks.buyMoreSubmit": { vi: "Mua thêm", en: "Buy More" },
+  "stocks.sellDesc": { vi: "Nhập thông tin bán cổ phiếu", en: "Enter sell details" },
+  "stocks.sellPriceLabel": { vi: "Giá bán", en: "Sell Price" },
+  "stocks.sellDate": { vi: "Ngày bán", en: "Sell Date" },
+  "stocks.totalRevenue": { vi: "Tổng thu về", en: "Total Revenue" },
+  "stocks.sellSubmit": { vi: "Bán", en: "Sell" },
+  "stocks.sellQtyExceed": { vi: "Không thể bán nhiều hơn số lượng đang có", en: "Cannot sell more than current quantity" },
+
 
   // Dashboard - Gold Section
   "gold.title": { vi: "Giá vàng SJC", en: "SJC Gold Price" },

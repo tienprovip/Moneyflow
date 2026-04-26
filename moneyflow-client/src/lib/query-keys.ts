@@ -4,6 +4,7 @@ export const queryKeys = {
   categories: ["categories"] as const,
   gold: ["gold"] as const,
   transactions: ["transactions"] as const,
+  stock: ["stock"] as const,
   walletTransactions: walletTransactionsKey,
   walletTransactionsById: (walletId: string) =>
     [...walletTransactionsKey, walletId] as const,
