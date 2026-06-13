@@ -5,6 +5,7 @@ import transactionRoutes from "../modules/transaction/transaction.route";
 import categoryRoutes from "../modules/category/category.route";
 import goldRoutes from "../modules/gold/gold.route";
 import stockRoutes from "../modules/stock/stock.route";
+import dashboardRoutes from "../modules/dashboard/dashboard.route";
 
 const router = Router();
 
@@ -14,4 +15,6 @@ router.use("/transaction", transactionRoutes);
 router.use("/category", categoryRoutes);
 router.use("/gold", goldRoutes);
 router.use("/stock", stockRoutes);
+router.use("/dashboard", dashboardRoutes);
+
 export default router;

@@ -698,9 +698,47 @@ export const deleteAccountService = async (
       return null;
     }
 
-    await TransactionModel.deleteMany({
-      accountId,
+    const relatedTransactions = await TransactionModel.find({
       userId,
+      $or: [{ accountId }, { toAccountId: accountId }],
+    }).session(session);
+
+    for (const transaction of relatedTransactions) {
+      if (transaction.type !== TransactionType.TRANSFER) {
+        continue;
+      }
+
+      const isSourceAccount = String(transaction.accountId) === accountId;
+      const isDestinationAccount = String(transaction.toAccountId) === accountId;
+
+      if (isSourceAccount && transaction.toAccountId) {
+        const destinationAccount = await AccountModel.findOne({
+          _id: transaction.toAccountId,
+          userId,
+        }).session(session);
+
+        if (destinationAccount) {
+          destinationAccount.balance -= transaction.amount;
+          await destinationAccount.save({ session });
+        }
+      }
+
+      if (isDestinationAccount) {
+        const sourceAccount = await AccountModel.findOne({
+          _id: transaction.accountId,
+          userId,
+        }).session(session);
+
+        if (sourceAccount) {
+          sourceAccount.balance += transaction.amount;
+          await sourceAccount.save({ session });
+        }
+      }
+    }
+
+    await TransactionModel.deleteMany({
+      userId,
+      $or: [{ accountId }, { toAccountId: accountId }],
     }).session(session);
 
     await account.deleteOne({ session });

@@ -1,4 +1,5 @@
 import { useLanguage } from "@/hooks/use-language";
+import { DashboardTopSpendingData } from "@/types/dashboard";
 
 const COLORS = [
   "hsl(var(--primary))",
@@ -15,19 +16,20 @@ const fmtVND = (v: number) => {
   return v.toLocaleString("vi-VN");
 };
 
-const TopSpending = () => {
-  const { t } = useLanguage();
+interface TopSpendingProps {
+  data: DashboardTopSpendingData[];
+}
 
-  const data = [
-    { category: t("spending.food"), amount: 4850000 },
-    { category: t("spending.bills"), amount: 9650000 },
-    { category: t("spending.shopping"), amount: 3200000 },
-    { category: t("spending.transport"), amount: 1850000 },
-    { category: t("spending.entertainment"), amount: 1200000 },
-    { category: t("spending.health"), amount: 800000 },
-  ].sort((a, b) => b.amount - a.amount);
+const TopSpending = ({ data }: TopSpendingProps) => {
+  const { t, locale } = useLanguage();
 
-  const maxAmount = data[0].amount ?? 1;
+  const maxAmount = data.length > 0 ? data[0].amount : 1;
+
+  const getCatName = (cat: any) => {
+    if (!cat) return "Unknown";
+    if (typeof cat === 'object') return cat[locale] || cat.vi || cat.en || "Unknown";
+    return String(cat);
+  };
 
   return (
     <div
@@ -41,28 +43,35 @@ const TopSpending = () => {
         {t("spending.subtitle")}
       </p>
 
-      <div className="space-y-3">
-        {data.map((item, i) => (
-          <div key={item.category} className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground w-20 truncate shrink-0">
-              {item.category}
-            </span>
-            <div className="flex-1 h-7 bg-secondary/50 rounded-md overflow-hidden relative">
-              <div
-                className="h-full rounded-md transition-all duration-500"
-                style={{
-                  width: `${(item.amount / maxAmount) * 100}%`,
-                  backgroundColor: COLORS[i % COLORS.length],
-                  opacity: 0.85,
-                }}
-              />
-            </div>
-            <span className="text-xs font-semibold text-foreground w-16 text-right shrink-0">
-              {fmtVND(item.amount)}
-            </span>
-          </div>
-        ))}
-      </div>
+      {data.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Không có dữ liệu</p>
+      ) : (
+        <div className="space-y-3">
+          {data.map((item, i) => {
+            const catName = getCatName(item.category);
+            return (
+              <div key={`${catName}-${i}`} className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground w-20 truncate shrink-0">
+                  {catName}
+                </span>
+                <div className="flex-1 h-7 bg-secondary/50 rounded-md overflow-hidden relative">
+                  <div
+                    className="h-full rounded-md transition-all duration-500"
+                    style={{
+                      width: `${(item.amount / maxAmount) * 100}%`,
+                      backgroundColor: COLORS[i % COLORS.length],
+                      opacity: 0.85,
+                    }}
+                  />
+                </div>
+                <span className="text-xs font-semibold text-foreground w-16 text-right shrink-0">
+                  {fmtVND(item.amount)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

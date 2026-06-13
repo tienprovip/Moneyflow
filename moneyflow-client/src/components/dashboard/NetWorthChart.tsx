@@ -1,5 +1,6 @@
 import { useLanguage } from "@/hooks/use-language";
 import { fmtShort } from "@/lib/format";
+import { DashboardNetWorthData } from "@/types/dashboard";
 import React from "react";
 import {
   CartesianGrid,
@@ -11,18 +12,13 @@ import {
   YAxis,
 } from "recharts";
 
-const NetWorthChart = () => {
+interface NetWorthChartProps {
+  data: DashboardNetWorthData[];
+}
+
+const NetWorthChart = ({ data }: NetWorthChartProps) => {
   const { t } = useLanguage();
 
-  const data = [
-    { month: t("month.8"), value: 2450000000 },
-    { month: t("month.9"), value: 2550000000 },
-    { month: t("month.10"), value: 2487000000 },
-    { month: t("month.11"), value: 2700000000 },
-    { month: t("month.12"), value: 2875000000 },
-    { month: t("month.1"), value: 3000000000 },
-    { month: t("month.2"), value: 3210000000 },
-  ];
   return (
     <div
       className="bg-card rounded-lg p-5 card-shadow animate-fade-in h-full"

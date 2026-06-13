@@ -361,25 +361,27 @@ export const sellStockService = async (
     let transferTransactionId: mongoose.Types.ObjectId | undefined;
     let incomeTransactionId: mongoose.Types.ObjectId | undefined;
 
-    const incomeCategory = await findOrCreateInvestmentIncomeCategory(userId, session);
-    const [incomeTx] = await TransactionModel.create(
-      [
-        {
-          userId,
-          accountId: sellAccount._id,
-          type: TransactionType.INCOME,
-          amount: totalSellAmount,
-          currencyCode: stock.currencyCode,
-          date: sellDate,
-          title: "Bán cổ phiếu",
-          note: `Bán cổ phiếu ${stock.symbol} (${sellQty} cp)`,
-          categoryId: incomeCategory._id,
-          isInvestmentReturn: true,
-        },
-      ],
-      { session },
-    );
-    incomeTransactionId = incomeTx._id as mongoose.Types.ObjectId;
+    if (profit > 0) {
+      const incomeCategory = await findOrCreateInvestmentIncomeCategory(userId, session);
+      const [incomeTx] = await TransactionModel.create(
+        [
+          {
+            userId,
+            accountId: sellAccount._id,
+            type: TransactionType.INCOME,
+            amount: profit,
+            currencyCode: stock.currencyCode,
+            date: sellDate,
+            title: STOCK_SELL_PROFIT_TITLE,
+            note: `${STOCK_SELL_PROFIT_TITLE} ${stock.symbol} (${sellQty} cp)`,
+            categoryId: incomeCategory._id,
+            isInvestmentReturn: true,
+          },
+        ],
+        { session },
+      );
+      incomeTransactionId = incomeTx._id as mongoose.Types.ObjectId;
+    }
 
     // Ghi sellLog
     stock.sellLogs.push({

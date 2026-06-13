@@ -6,6 +6,8 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
+import { DashboardSummaryResponse } from "@/types/dashboard";
+import { fmtVND } from "@/lib/format";
 
 const accentStyles = {
   primary: "bg-primary/10 text-primary",
@@ -13,31 +15,35 @@ const accentStyles = {
   gold: "bg-gold/10 text-gold",
 };
 
-export function AssetCards() {
+interface AssetCardsProps {
+  data: DashboardSummaryResponse["assets"];
+}
+
+export function AssetCards({ data }: AssetCardsProps) {
   const { t } = useLanguage();
 
   const assets = [
     {
       title: t("asset.cash"),
-      value: "1.130.750.000₫",
-      change: "+2,1%",
-      positive: true,
+      value: fmtVND(data.cash.value),
+      change: `${data.cash.change >= 0 ? "+" : ""}${data.cash.change}%`,
+      positive: data.cash.change >= 0,
       icon: Wallet,
       accent: "primary" as const,
     },
     {
       title: t("asset.stocks"),
-      value: "1.571.000.000₫",
-      change: "+18,7%",
-      positive: true,
+      value: fmtVND(data.stocks.value),
+      change: `${data.stocks.change >= 0 ? "+" : ""}${data.stocks.change}%`,
+      positive: data.stocks.change >= 0,
       icon: TrendingUp,
       accent: "chart-blue" as const,
     },
     {
       title: t("asset.gold"),
-      value: "508.250.000₫",
-      change: "-1,3%",
-      positive: false,
+      value: fmtVND(data.gold.value),
+      change: `${data.gold.change >= 0 ? "+" : ""}${data.gold.change}%`,
+      positive: data.gold.change >= 0,
       icon: CircleDollarSign,
       accent: "gold" as const,
     },

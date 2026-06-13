@@ -211,14 +211,37 @@ class GoldScraperService {
     // Default fallbacks if parsing completely fails (for resilience)
     if (prices[GoldType.SJC9999].buy === 0 && prices[GoldType.KGB].buy === 0) {
       console.warn("Failed to extract any prices, returning empty/mock defaults");
-      return { prices: {
-        [GoldType.SJC9999]: { buy: 9450000, sell: 9420000 },
-        [GoldType.KGB]: { buy: 9380000, sell: 9350000 },
-        [GoldType.GOLD_9999]: { buy: 9380000, sell: 9350000 },
-        [GoldType.GOLD_999]: { buy: 9300000, sell: 9270000 },
-        [GoldType.NL9999]: { buy: 9200000, sell: 9170000 },
-        [GoldType.NL999]: { buy: 9120000, sell: 9090000 },
-      }, history: {} };
+      
+      const mockHistory = [];
+      const baseBuy = 94000000;
+      const baseSell = 94300000;
+      const days = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+      
+      for (let i = 0; i < 7; i++) {
+        // Generate a random daily fluctuation
+        const fluctuation = (Math.random() - 0.5) * 500000;
+        const buy = Math.round((baseBuy + fluctuation) / 100000) * 100000;
+        const sell = Math.round((baseSell + fluctuation) / 100000) * 100000;
+        mockHistory.push({
+          date: days[i],
+          buy,
+          sell
+        });
+      }
+
+      return { 
+        prices: {
+          [GoldType.SJC9999]: { buy: mockHistory[6].buy, sell: mockHistory[6].sell },
+          [GoldType.KGB]: { buy: 9380000, sell: 9350000 },
+          [GoldType.GOLD_9999]: { buy: 9380000, sell: 9350000 },
+          [GoldType.GOLD_999]: { buy: 9300000, sell: 9270000 },
+          [GoldType.NL9999]: { buy: 9200000, sell: 9170000 },
+          [GoldType.NL999]: { buy: 9120000, sell: 9090000 },
+        }, 
+        history: {
+          [GoldType.SJC9999]: mockHistory
+        } 
+      };
     }
 
     return { prices, history };

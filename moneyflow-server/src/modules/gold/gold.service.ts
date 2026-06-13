@@ -363,25 +363,27 @@ export const sellGoldService = async (
 
     let incomeTransactionId: mongoose.Types.ObjectId | undefined;
 
-    const sellGoldCategory = await findOrCreateInvestmentIncomeCategory(userId, session);
-    const [incomeTx] = await TransactionModel.create(
-      [
-        {
-          userId,
-          accountId: sellAccount._id,
-          type: TransactionType.INCOME,
-          amount: totalSellAmount,
-          currencyCode: gold.currencyCode,
-          date: sellDate,
-          title: "Bán vàng",
-          note: `Bán vàng (${sellWeight} chỉ)`,
-          categoryId: sellGoldCategory._id,
-          isInvestmentReturn: true,
-        },
-      ],
-      { session },
-    );
-    incomeTransactionId = incomeTx._id as mongoose.Types.ObjectId;
+    if (profit > 0) {
+      const sellGoldCategory = await findOrCreateInvestmentIncomeCategory(userId, session);
+      const [incomeTx] = await TransactionModel.create(
+        [
+          {
+            userId,
+            accountId: sellAccount._id,
+            type: TransactionType.INCOME,
+            amount: profit,
+            currencyCode: gold.currencyCode,
+            date: sellDate,
+            title: GOLD_SELL_PROFIT_TITLE,
+            note: `${GOLD_SELL_PROFIT_TITLE} (${sellWeight} chỉ)`,
+            categoryId: sellGoldCategory._id,
+            isInvestmentReturn: true,
+          },
+        ],
+        { session },
+      );
+      incomeTransactionId = incomeTx._id as mongoose.Types.ObjectId;
+    }
 
     // Ghi sellLog
     gold.sellLogs.push({
