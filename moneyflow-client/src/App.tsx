@@ -2,11 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { LanguageProvider } from "@/hooks/use-language";
 import { lazy, Suspense } from "react";
 import { AuthProvider } from "@/context/AuthContext";
+import { getAccessToken } from "@/utils/token";
 
 const Auth = lazy(() => import("./pages/AuthPage"));
 const Dashboard = lazy(() => import("./pages/DashboardPage"));
@@ -25,6 +26,10 @@ const PageLoader = () => (
   </div>
 );
 
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  return getAccessToken() ? children : <Navigate to="/auth" replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -36,13 +41,55 @@ const App = () => (
             <BrowserRouter>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
+                  <Route
+                    path="/"
+                    element={
+                      <ProtectedRoute>
+                        <Dashboard />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route path="/auth" element={<Auth />} />
-                  <Route path="/wallets" element={<Wallets />} />
-                  <Route path="/savings" element={<Savings />} />
-                  <Route path="/gold" element={<Gold />} />
-                  <Route path="/transactions" element={<Transactions />} />
-                  <Route path="/stocks" element={<Stock />} />
+                  <Route
+                    path="/wallets"
+                    element={
+                      <ProtectedRoute>
+                        <Wallets />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/savings"
+                    element={
+                      <ProtectedRoute>
+                        <Savings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/gold"
+                    element={
+                      <ProtectedRoute>
+                        <Gold />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/transactions"
+                    element={
+                      <ProtectedRoute>
+                        <Transactions />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/stocks"
+                    element={
+                      <ProtectedRoute>
+                        <Stock />
+                      </ProtectedRoute>
+                    }
+                  />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
